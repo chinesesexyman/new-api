@@ -328,21 +328,79 @@ func requestCryptoPay(c *gin.Context, req *EpayRequest, payMoney float64, group 
 
 	c.JSON(200, gin.H{
 		"message": "success",
-		"data": gin.H{
-			"payment_type":  "crypto",
-			"trade_no":      tradeNo,
-			"chain":         cryptoMethod.Chain,
-			"token":         cryptoMethod.Token,
-			"address":       selectedWallet.Address,
-			"address_label": selectedWallet.Label,
-			"amount":        cryptoAmount,
-			"base_amount":   baseCryptoAmount,
-			"unique_suffix": uniqueSuffix,
-			"expire_at":     expireAt,
-			"amount_fiat":   payMoney,
-			"instruction":   instruction,
-		},
+		"data":    buildCryptoPaymentResponse(cryptoMethod, selectedWallet.Label, tradeNo, selectedWallet.Address, cryptoAmount, baseCryptoAmount, uniqueSuffix, expireAt, payMoney, instruction),
 	})
+}
+
+func resumeCryptoTopUp(c *gin.Context, topUp *model.TopUp) {
+	if topUp == nil {
+		c.JSON(200, gin.H{"message": "error", "data": "订单不存在"})
+		return
+	}
+
+	cryptoMethod, ok := findCryptoPaymentMethod(topUp.PaymentMethod)
+	if !ok {
+		c.JSON(200, gin.H{"message": "error", "data": "支付方式不存在"})
+		return
+	}
+
+	payload, err := ParseCryptoTopUpPayload(topUp.ProviderPayload)
+	if err != nil || payload == nil {
+		c.JSON(200, gin.H{"message": "error", "data": "订单支付信息缺失"})
+		return
+	}
+
+	if isCryptoTopUpExpiredForAllocation(topUp) {
+		_ = model.ExpireCryptoTopUp(topUp.TradeNo)
+		c.JSON(200, gin.H{"message": "error", "data": "订单已过期，请重新创建支付订单"})
+		return
+	}
+
+	addressLabel := ""
+	for _, wallet := range operation_setting.GetCryptoWalletsByChain(cryptoMethod.ChainKey) {
+		if strings.EqualFold(strings.TrimSpace(wallet.Address), strings.TrimSpace(payload.Address)) {
+			addressLabel = wallet.Label
+			break
+		}
+	}
+
+	instruction := strings.TrimSpace(operation_setting.GetPaymentSetting().CryptoPaymentInstruction)
+	if instruction == "" {
+		instruction = "链上支付创建后，请按订单信息转账，系统将在监听到到账并确认后自动入账。"
+	}
+
+	c.JSON(200, gin.H{
+		"message": "success",
+		"data": buildCryptoPaymentResponse(
+			cryptoMethod,
+			addressLabel,
+			topUp.TradeNo,
+			payload.Address,
+			payload.ExpectedAmount,
+			payload.BaseAmount,
+			payload.UniqueSuffix,
+			payload.ExpireAt,
+			topUp.Money,
+			instruction,
+		),
+	})
+}
+
+func buildCryptoPaymentResponse(method *CryptoPaymentMethod, addressLabel string, tradeNo string, address string, amount float64, baseAmount float64, uniqueSuffix float64, expireAt int64, payMoney float64, instruction string) gin.H {
+	return gin.H{
+		"payment_type":  "crypto",
+		"trade_no":      tradeNo,
+		"chain":         method.Chain,
+		"token":         method.Token,
+		"address":       address,
+		"address_label": addressLabel,
+		"amount":        amount,
+		"base_amount":   baseAmount,
+		"unique_suffix": uniqueSuffix,
+		"expire_at":     expireAt,
+		"amount_fiat":   payMoney,
+		"instruction":   instruction,
+	}
 }
 
 func buildCryptoTopUpPayload(method *CryptoPaymentMethod, wallet *operation_setting.CryptoWalletConfig, baseAmount float64, uniqueSuffix float64, cryptoAmount float64, expireAt int64) string {

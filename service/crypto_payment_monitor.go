@@ -368,7 +368,7 @@ func fetchEthereumTransfers(ctx context.Context, rpcURL string, method string, o
 		"params":  params,
 	})
 	if err == nil {
-		logger.LogInfo(ctx, fmt.Sprintf("eth_getLogs request: %s", string(requestLog)))
+		logger.LogDebug(ctx, "eth_getLogs request: %s", string(requestLog))
 	}
 
 	var logs []struct {
@@ -570,7 +570,7 @@ func getSolanaTokenAccountsByOwner(rpcURL string, ownerAddress string, mint stri
 				Data struct {
 					Parsed struct {
 						Info struct {
-							Mint string `json:"mint"`
+							Mint        string `json:"mint"`
 							TokenAmount struct {
 								Decimals int `json:"decimals"`
 							} `json:"tokenAmount"`
@@ -615,7 +615,7 @@ func logSolanaRPCRequest(ctx context.Context, method string, params []any) {
 		"params":  params,
 	})
 	if err == nil {
-		logger.LogInfo(ctx, fmt.Sprintf("solana rpc request: %s", string(requestLog)))
+		logger.LogDebug(ctx, "solana rpc request: %s", string(requestLog))
 	}
 }
 
@@ -786,7 +786,7 @@ func rpcCall(rpcURL string, method string, params []any, out any) error {
 func logSolanaRPCResponse(ctx context.Context, method string, raw []byte) {
 	switch method {
 	case "getTokenAccountsByOwner", "getSignaturesForAddress", "getTransaction":
-		logger.LogInfo(ctx, fmt.Sprintf("solana rpc response: method=%s body=%s", method, string(raw)))
+		logger.LogDebug(ctx, "solana rpc response: method=%s body=%s", method, string(raw))
 	}
 }
 

@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/url"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -73,6 +74,10 @@ type AmountRequest struct {
 	PaymentMethod string `json:"payment_method"`
 }
 
+type ResumeTopUpRequest struct {
+	TradeNo string `json:"trade_no"`
+}
+
 func GetEpayClient() *epay.Client {
 	if operation_setting.PayAddress == "" || operation_setting.EpayId == "" || operation_setting.EpayKey == "" {
 		return nil
@@ -85,6 +90,29 @@ func GetEpayClient() *epay.Client {
 		return nil
 	}
 	return withUrl
+}
+
+func buildEpayPurchase(tradeNo string, paymentMethod string, amount int64, payMoney float64) (string, map[string]string, error) {
+	callBackAddress := service.GetCallbackAddress()
+	returnUrl, _ := url.Parse(system_setting.ServerAddress + "/console/log")
+	notifyUrl, _ := url.Parse(callBackAddress + "/api/user/epay/notify")
+	client := GetEpayClient()
+	if client == nil {
+		return "", nil, fmt.Errorf("当前管理员未配置支付信息")
+	}
+	uri, params, err := client.Purchase(&epay.PurchaseArgs{
+		Type:           paymentMethod,
+		ServiceTradeNo: tradeNo,
+		Name:           fmt.Sprintf("TUC%d", amount),
+		Money:          strconv.FormatFloat(payMoney, 'f', 2, 64),
+		Device:         epay.PC,
+		NotifyUrl:      notifyUrl,
+		ReturnUrl:      returnUrl,
+	})
+	if err != nil {
+		return "", nil, err
+	}
+	return uri, params, nil
 }
 
 func getPayMoney(amount int64, group string) float64 {
@@ -161,25 +189,9 @@ func RequestEpay(c *gin.Context) {
 		return
 	}
 
-	callBackAddress := service.GetCallbackAddress()
-	returnUrl, _ := url.Parse(system_setting.ServerAddress + "/console/log")
-	notifyUrl, _ := url.Parse(callBackAddress + "/api/user/epay/notify")
 	tradeNo := fmt.Sprintf("%s%d", common.GetRandomString(6), time.Now().Unix())
 	tradeNo = fmt.Sprintf("USR%dNO%s", id, tradeNo)
-	client := GetEpayClient()
-	if client == nil {
-		c.JSON(200, gin.H{"message": "error", "data": "当前管理员未配置支付信息"})
-		return
-	}
-	uri, params, err := client.Purchase(&epay.PurchaseArgs{
-		Type:           req.PaymentMethod,
-		ServiceTradeNo: tradeNo,
-		Name:           fmt.Sprintf("TUC%d", req.Amount),
-		Money:          strconv.FormatFloat(payMoney, 'f', 2, 64),
-		Device:         epay.PC,
-		NotifyUrl:      notifyUrl,
-		ReturnUrl:      returnUrl,
-	})
+	uri, params, err := buildEpayPurchase(tradeNo, req.PaymentMethod, req.Amount, payMoney)
 	if err != nil {
 		c.JSON(200, gin.H{"message": "error", "data": "拉起支付失败"})
 		return
@@ -205,6 +217,73 @@ func RequestEpay(c *gin.Context) {
 		return
 	}
 	c.JSON(200, gin.H{"message": "success", "data": params, "url": uri})
+}
+
+func ResumeTopUp(c *gin.Context) {
+	var req ResumeTopUpRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(200, gin.H{"message": "error", "data": "参数错误"})
+		return
+	}
+	tradeNo := strings.TrimSpace(req.TradeNo)
+	if tradeNo == "" {
+		c.JSON(200, gin.H{"message": "error", "data": "订单号不能为空"})
+		return
+	}
+
+	id := c.GetInt("id")
+	topUp := model.GetTopUpByTradeNo(tradeNo)
+	if topUp == nil || topUp.UserId != id {
+		c.JSON(200, gin.H{"message": "error", "data": "订单不存在"})
+		return
+	}
+	if topUp.Status != common.TopUpStatusPending {
+		c.JSON(200, gin.H{"message": "error", "data": "订单不是待支付状态"})
+		return
+	}
+
+	switch topUp.PaymentMethod {
+	case PaymentMethodStripe:
+		user, _ := model.GetUserById(id, false)
+		if user == nil {
+			c.JSON(200, gin.H{"message": "error", "data": "用户不存在"})
+			return
+		}
+		payLink, err := genStripeLink(topUp.TradeNo, user.StripeCustomer, user.Email, topUp.Amount, "", "")
+		if err != nil {
+			c.JSON(200, gin.H{"message": "error", "data": "拉起支付失败"})
+			return
+		}
+		c.JSON(200, gin.H{"message": "success", "data": gin.H{"pay_link": payLink}})
+		return
+	case PaymentMethodCreem, "":
+		checkoutURL, err := resumeCreemTopUp(topUp, id)
+		if err == nil {
+			c.JSON(200, gin.H{"message": "success", "data": gin.H{"checkout_url": checkoutURL}})
+			return
+		}
+		if topUp.PaymentMethod == "" {
+			c.JSON(200, gin.H{"message": "error", "data": "该订单支付方式缺失，无法继续支付"})
+			return
+		}
+	case PaymentMethodEthUSDT, PaymentMethodEthUSDC, PaymentMethodSolanaUSDT, PaymentMethodSolanaUSDC:
+		resumeCryptoTopUp(c, topUp)
+		return
+	default:
+		if !operation_setting.ContainsPayMethod(topUp.PaymentMethod) {
+			c.JSON(200, gin.H{"message": "error", "data": "支付方式不存在"})
+			return
+		}
+		uri, params, err := buildEpayPurchase(topUp.TradeNo, topUp.PaymentMethod, topUp.Amount, topUp.Money)
+		if err != nil {
+			c.JSON(200, gin.H{"message": "error", "data": "拉起支付失败"})
+			return
+		}
+		c.JSON(200, gin.H{"message": "success", "data": params, "url": uri})
+		return
+	}
+
+	c.JSON(200, gin.H{"message": "error", "data": "暂不支持该订单继续支付"})
 }
 
 // tradeNo lock

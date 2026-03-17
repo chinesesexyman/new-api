@@ -5,7 +5,6 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/QuantumNous/new-api/common"
@@ -78,7 +77,7 @@ func (*CreemAdaptor) RequestPay(c *gin.Context, req *CreemPayRequest) {
 
 	// 解析产品列表
 	var products []CreemProduct
-	err := json.Unmarshal([]byte(setting.CreemProducts), &products)
+	err := common.UnmarshalJsonStr(setting.CreemProducts, &products)
 	if err != nil {
 		log.Println("解析Creem产品列表失败", err)
 		c.JSON(200, gin.H{"message": "error", "data": "产品配置错误"})
@@ -108,12 +107,14 @@ func (*CreemAdaptor) RequestPay(c *gin.Context, req *CreemPayRequest) {
 
 	// 先创建订单记录，使用产品配置的金额和充值额度
 	topUp := &model.TopUp{
-		UserId:     id,
-		Amount:     selectedProduct.Quota, // 充值额度
-		Money:      selectedProduct.Price, // 支付金额
-		TradeNo:    referenceId,
-		CreateTime: time.Now().Unix(),
-		Status:     common.TopUpStatusPending,
+		UserId:          id,
+		Amount:          selectedProduct.Quota, // 充值额度
+		Money:           selectedProduct.Price, // 支付金额
+		TradeNo:         referenceId,
+		PaymentMethod:   PaymentMethodCreem,
+		ProviderPayload: buildCreemTopUpPayload(selectedProduct),
+		CreateTime:      time.Now().Unix(),
+		Status:          common.TopUpStatusPending,
 	}
 	err = topUp.Insert()
 	if err != nil {
@@ -408,7 +409,7 @@ func genCreemLink(referenceId string, product *CreemProduct, email string, usern
 	}
 
 	// 序列化请求数据
-	jsonData, err := json.Marshal(requestData)
+	jsonData, err := common.Marshal(requestData)
 	if err != nil {
 		return "", fmt.Errorf("序列化请求数据失败: %v", err)
 	}
@@ -450,7 +451,7 @@ func genCreemLink(referenceId string, product *CreemProduct, email string, usern
 	}
 	// 解析响应
 	var checkoutResp CreemCheckoutResponse
-	err = json.Unmarshal(body, &checkoutResp)
+	err = common.Unmarshal(body, &checkoutResp)
 	if err != nil {
 		return "", fmt.Errorf("解析响应失败: %v", err)
 	}
@@ -461,4 +462,89 @@ func genCreemLink(referenceId string, product *CreemProduct, email string, usern
 
 	log.Printf("Creem 支付链接创建成功 - 订单号: %s, 支付链接: %s", referenceId, checkoutResp.CheckoutUrl)
 	return checkoutResp.CheckoutUrl, nil
+}
+
+func buildCreemTopUpPayload(product *CreemProduct) string {
+	if product == nil {
+		return ""
+	}
+	return common.GetJsonString(map[string]any{
+		"product_id":   product.ProductId,
+		"product_name": product.Name,
+		"currency":     product.Currency,
+	})
+}
+
+func getCreemProducts() ([]CreemProduct, error) {
+	var products []CreemProduct
+	if err := common.UnmarshalJsonStr(setting.CreemProducts, &products); err != nil {
+		return nil, err
+	}
+	return products, nil
+}
+
+func getCreemProductByID(productID string) (*CreemProduct, error) {
+	products, err := getCreemProducts()
+	if err != nil {
+		return nil, err
+	}
+	for _, product := range products {
+		if product.ProductId == productID {
+			p := product
+			return &p, nil
+		}
+	}
+	return nil, nil
+}
+
+func findCreemProductByTopUp(topUp *model.TopUp) (*CreemProduct, error) {
+	if topUp == nil {
+		return nil, nil
+	}
+	if topUp.ProviderPayload != "" {
+		var payload struct {
+			ProductID string `json:"product_id"`
+			ProductId string `json:"productId"`
+		}
+		if err := common.UnmarshalJsonStr(topUp.ProviderPayload, &payload); err == nil {
+			productID := payload.ProductID
+			if productID == "" {
+				productID = payload.ProductId
+			}
+			if productID != "" {
+				return getCreemProductByID(productID)
+			}
+		}
+	}
+
+	products, err := getCreemProducts()
+	if err != nil {
+		return nil, err
+	}
+	for _, product := range products {
+		if product.Quota == topUp.Amount && product.Price == topUp.Money {
+			p := product
+			return &p, nil
+		}
+	}
+	return nil, nil
+}
+
+func resumeCreemTopUp(topUp *model.TopUp, userID int) (string, error) {
+	if topUp == nil {
+		return "", fmt.Errorf("订单不存在")
+	}
+	product, err := findCreemProductByTopUp(topUp)
+	if err != nil {
+		return "", err
+	}
+	if product == nil {
+		return "", fmt.Errorf("未找到对应的 Creem 产品配置")
+	}
+
+	user, err := model.GetUserById(userID, false)
+	if err != nil || user == nil {
+		return "", fmt.Errorf("用户不存在")
+	}
+	return genCreemLink(topUp.TradeNo, product, user.Email, user.Username)
 }

@@ -28,7 +28,7 @@ import {
   copy,
   getQuotaPerUnit,
 } from '../../helpers';
-import { Modal, Toast } from '@douyinfe/semi-ui';
+import { Modal, Toast, Typography } from '@douyinfe/semi-ui';
 import { useTranslation } from 'react-i18next';
 import { UserContext } from '../../context/User';
 import { StatusContext } from '../../context/Status';
@@ -38,6 +38,8 @@ import InvitationCard from './InvitationCard';
 import TransferModal from './modals/TransferModal';
 import PaymentConfirmModal from './modals/PaymentConfirmModal';
 import TopupHistoryModal from './modals/TopupHistoryModal';
+
+const { Text } = Typography;
 
 const TopUp = () => {
   const { t } = useTranslation();
@@ -230,36 +232,7 @@ const TopUp = () => {
       if (res !== undefined) {
         const { message, data } = res.data;
         if (message === 'success') {
-          if (payWay === 'stripe') {
-            // Stripe 支付回调处理
-            window.open(data.pay_link, '_blank');
-          } else if (data?.payment_type === 'crypto') {
-            setCryptoPaymentData(data);
-            setCryptoPaymentOpen(true);
-          } else {
-            // 普通支付表单提交
-            let params = data;
-            let url = res.data.url;
-            let form = document.createElement('form');
-            form.action = url;
-            form.method = 'POST';
-            let isSafari =
-              navigator.userAgent.indexOf('Safari') > -1 &&
-              navigator.userAgent.indexOf('Chrome') < 1;
-            if (!isSafari) {
-              form.target = '_blank';
-            }
-            for (let key in params) {
-              let input = document.createElement('input');
-              input.type = 'hidden';
-              input.name = key;
-              input.value = params[key];
-              form.appendChild(input);
-            }
-            document.body.appendChild(form);
-            form.submit();
-            document.body.removeChild(form);
-          }
+          handlePaymentResponse(res.data);
         } else {
           const errorMsg =
             typeof data === 'string' ? data : message || t('支付失败');
@@ -326,6 +299,68 @@ const TopUp = () => {
   const processCreemCallback = (data) => {
     // 与 Stripe 保持一致的实现方式
     window.open(data.checkout_url, '_blank');
+  };
+
+  const submitPaymentForm = (url, params) => {
+    if (!url || !params) {
+      return;
+    }
+    let form = document.createElement('form');
+    form.action = url;
+    form.method = 'POST';
+    let isSafari =
+      navigator.userAgent.indexOf('Safari') > -1 &&
+      navigator.userAgent.indexOf('Chrome') < 1;
+    if (!isSafari) {
+      form.target = '_blank';
+    }
+    for (let key in params) {
+      let input = document.createElement('input');
+      input.type = 'hidden';
+      input.name = key;
+      input.value = params[key];
+      form.appendChild(input);
+    }
+    document.body.appendChild(form);
+    form.submit();
+    document.body.removeChild(form);
+  };
+
+  const handlePaymentResponse = (payload) => {
+    const { data, url } = payload || {};
+    if (data?.pay_link) {
+      window.open(data.pay_link, '_blank');
+      return;
+    }
+    if (data?.checkout_url) {
+      window.open(data.checkout_url, '_blank');
+      return;
+    }
+    if (data?.payment_type === 'crypto') {
+      setCryptoPaymentData(data);
+      setCryptoPaymentOpen(true);
+      return;
+    }
+    submitPaymentForm(url, data);
+  };
+
+  const handleResumeTopup = async (record) => {
+    try {
+      const res = await API.post('/api/user/topup/resume', {
+        trade_no: record.trade_no,
+      });
+      const { message, data } = res.data;
+      if (message === 'success') {
+        handlePaymentResponse(res.data);
+        showSuccess(t('已重新拉起支付'));
+        return;
+      }
+      const errorMsg =
+        typeof data === 'string' ? data : message || t('拉起支付失败');
+      showError(errorMsg);
+    } catch (error) {
+      showError(t('拉起支付失败'));
+    }
   };
 
   const getUserQuota = async () => {
@@ -544,6 +579,64 @@ const TopUp = () => {
     showSuccess(t('邀请链接已复制到剪切板'));
   };
 
+  const handleCryptoFieldCopy = async (value, message) => {
+    if (!value) {
+      showError(t('暂无可复制内容'));
+      return;
+    }
+    await copy(String(value));
+    showSuccess(message);
+  };
+
+  const renderCryptoInfoRow = (
+    label,
+    value,
+    { copyValue, copyMessage, strong = false, mono = false } = {},
+  ) => {
+    const isCopyable = Boolean(copyValue);
+    return (
+      <div
+        className='grid grid-cols-[96px_1fr] gap-3 px-4 py-3 border-b border-slate-200 last:border-b-0'
+        style={{
+          cursor: isCopyable ? 'pointer' : 'default',
+          backgroundColor: isCopyable ? 'rgba(248,250,252,0.85)' : 'transparent',
+        }}
+        onClick={
+          isCopyable
+            ? () => handleCryptoFieldCopy(copyValue, copyMessage)
+            : undefined
+        }
+      >
+        <Text type='secondary'>{label}</Text>
+        <div className='flex items-start justify-between gap-3'>
+          <Text
+            strong={strong}
+            style={{
+              wordBreak: 'break-all',
+              fontFamily: mono
+                ? 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace'
+                : undefined,
+            }}
+          >
+            {value}
+          </Text>
+          {isCopyable && (
+            <Text
+              link
+              size='small'
+              onClick={(event) => {
+                event.stopPropagation();
+                handleCryptoFieldCopy(copyValue, copyMessage);
+              }}
+            >
+              {t('复制')}
+            </Text>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   useEffect(() => {
     // 始终获取最新用户数据，确保余额等统计信息准确
     getUserQuota().then();
@@ -735,6 +828,7 @@ const TopUp = () => {
       <TopupHistoryModal
         visible={openHistory}
         onCancel={handleHistoryCancel}
+        onRepay={handleResumeTopup}
         t={t}
       />
 
@@ -749,28 +843,41 @@ const TopUp = () => {
         centered
       >
         {cryptoPaymentData && (
-          <>
-            <p>
-              {t('订单号')}：<strong>{cryptoPaymentData.trade_no}</strong>
-            </p>
-            <p>
-              {t('支付网络')}：{cryptoPaymentData.chain}
-            </p>
-            <p>
-              {t('支付币种')}：{cryptoPaymentData.token}
-            </p>
-            <p>
-              {t('应付金额')}：{cryptoPaymentData.amount}{' '}
-              {cryptoPaymentData.token}
-            </p>
-            <p>
-              {t('参考法币金额')}：{cryptoPaymentData.amount_fiat} {t('元')}
-            </p>
-            <p>
-              {t('收款地址')}：{cryptoPaymentData.address}
-            </p>
-            <p>{cryptoPaymentData.instruction}</p>
-          </>
+          <div className='space-y-4'>
+            <div
+              className='overflow-hidden rounded-xl border border-slate-200 bg-white'
+              style={{ boxShadow: '0 10px 30px rgba(15, 23, 42, 0.08)' }}
+            >
+              {renderCryptoInfoRow(t('订单号'), cryptoPaymentData.trade_no, {
+                strong: true,
+                mono: true,
+              })}
+              {renderCryptoInfoRow(t('支付网络'), cryptoPaymentData.chain)}
+              {renderCryptoInfoRow(t('支付币种'), cryptoPaymentData.token)}
+              {renderCryptoInfoRow(
+                t('应付金额'),
+                `${cryptoPaymentData.amount} ${cryptoPaymentData.token}`,
+                {
+                  copyValue: `${cryptoPaymentData.amount}`,
+                  copyMessage: t('支付金额已复制到剪切板'),
+                  strong: true,
+                  mono: true,
+                },
+              )}
+              {renderCryptoInfoRow(
+                t('参考法币金额'),
+                `${cryptoPaymentData.amount_fiat} ${t('元')}`,
+              )}
+              {renderCryptoInfoRow(t('收款地址'), cryptoPaymentData.address, {
+                copyValue: cryptoPaymentData.address,
+                copyMessage: t('收款地址已复制到剪切板'),
+                mono: true,
+              })}
+            </div>
+            <div className='rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-900'>
+              {cryptoPaymentData.instruction}
+            </div>
+          </div>
         )}
       </Modal>
 

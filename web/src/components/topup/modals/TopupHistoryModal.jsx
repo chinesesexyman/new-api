@@ -59,7 +59,7 @@ const PAYMENT_METHOD_MAP = {
   solana_usdc: 'USDC (Solana)',
 };
 
-const TopupHistoryModal = ({ visible, onCancel, t }) => {
+const TopupHistoryModal = ({ visible, onCancel, onRepay, t }) => {
   const [loading, setLoading] = useState(false);
   const [topups, setTopups] = useState([]);
   const [total, setTotal] = useState(0);
@@ -212,13 +212,12 @@ const TopupHistoryModal = ({ visible, onCancel, t }) => {
       },
     ];
 
-    // 管理员才显示操作列
-    if (userIsAdmin) {
-      baseColumns.push({
-        title: t('操作'),
-        key: 'action',
-        render: (_, record) => {
-          if (record.status !== 'pending') return null;
+    baseColumns.push({
+      title: t('操作'),
+      key: 'action',
+      render: (_, record) => {
+        if (record.status !== 'pending') return null;
+        if (userIsAdmin) {
           return (
             <Button
               size='small'
@@ -229,9 +228,19 @@ const TopupHistoryModal = ({ visible, onCancel, t }) => {
               {t('补单')}
             </Button>
           );
-        },
-      });
-    }
+        }
+        return (
+          <Button
+            size='small'
+            type='primary'
+            theme='outline'
+            onClick={() => onRepay?.(record)}
+          >
+            {t('继续支付')}
+          </Button>
+        );
+      },
+    });
 
     baseColumns.push({
       title: t('创建时间'),
@@ -241,7 +250,7 @@ const TopupHistoryModal = ({ visible, onCancel, t }) => {
     });
 
     return baseColumns;
-  }, [t, userIsAdmin]);
+  }, [confirmAdminComplete, onRepay, t, userIsAdmin]);
 
   return (
     <Modal
