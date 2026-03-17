@@ -53,6 +53,10 @@ const PAYMENT_METHOD_MAP = {
   creem: 'Creem',
   alipay: '支付宝',
   wxpay: '微信',
+  eth_usdt: 'USDT (ETH)',
+  eth_usdc: 'USDC (ETH)',
+  solana_usdt: 'USDT (Solana)',
+  solana_usdc: 'USDC (Solana)',
 };
 
 const TopupHistoryModal = ({ visible, onCancel, t }) => {

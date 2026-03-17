@@ -76,6 +76,8 @@ const TopUp = () => {
   const [paymentLoading, setPaymentLoading] = useState(false);
   const [confirmLoading, setConfirmLoading] = useState(false);
   const [payMethods, setPayMethods] = useState([]);
+  const [cryptoPaymentData, setCryptoPaymentData] = useState(null);
+  const [cryptoPaymentOpen, setCryptoPaymentOpen] = useState(false);
 
   const affFetchedRef = useRef(false);
 
@@ -104,6 +106,14 @@ const TopUp = () => {
     amount_options: [],
     discount: {},
   });
+
+  const isCryptoPayment = (paymentMethod) =>
+    [
+      'eth_usdt',
+      'eth_usdc',
+      'solana_usdt',
+      'solana_usdc',
+    ].includes(paymentMethod);
 
   const topUp = async () => {
     if (redemptionCode === '') {
@@ -168,7 +178,7 @@ const TopUp = () => {
       if (payment === 'stripe') {
         await getStripeAmount();
       } else {
-        await getAmount();
+        await getAmount(undefined, payment);
       }
 
       if (topUpCount < minTopUp) {
@@ -192,7 +202,7 @@ const TopUp = () => {
     } else {
       // 普通支付处理
       if (amount === 0) {
-        await getAmount();
+        await getAmount(undefined, payWay);
       }
     }
 
@@ -223,6 +233,9 @@ const TopUp = () => {
           if (payWay === 'stripe') {
             // Stripe 支付回调处理
             window.open(data.pay_link, '_blank');
+          } else if (data?.payment_type === 'crypto') {
+            setCryptoPaymentData(data);
+            setCryptoPaymentOpen(true);
           } else {
             // 普通支付表单提交
             let params = data;
@@ -563,10 +576,19 @@ const TopUp = () => {
   }, [statusState?.status]);
 
   const renderAmount = () => {
+    if (isCryptoPayment(payWay)) {
+      const token = payMethods.find((item) => item.type === payWay)?.name || '';
+      const tokenLabel = token.includes('USDC')
+        ? 'USDC'
+        : token.includes('USDT')
+          ? 'USDT'
+          : '';
+      return `${amount}${tokenLabel ? ` ${tokenLabel}` : ''}`;
+    }
     return amount + ' ' + t('元');
   };
 
-  const getAmount = async (value) => {
+  const getAmount = async (value, paymentMethod = payWay) => {
     if (value === undefined) {
       value = topUpCount;
     }
@@ -574,6 +596,7 @@ const TopUp = () => {
     try {
       const res = await API.post('/api/user/amount', {
         amount: parseFloat(value),
+        payment_method: paymentMethod,
       });
       if (res !== undefined) {
         const { message, data } = res.data;
@@ -623,6 +646,11 @@ const TopUp = () => {
     setOpen(false);
   };
 
+  const handleCryptoPaymentCancel = () => {
+    setCryptoPaymentOpen(false);
+    setCryptoPaymentData(null);
+  };
+
   const handleTransferCancel = () => {
     setOpenTransfer(false);
   };
@@ -641,9 +669,14 @@ const TopUp = () => {
   };
 
   // 选择预设充值额度
-  const selectPresetAmount = (preset) => {
+  const selectPresetAmount = async (preset) => {
     setTopUpCount(preset.value);
     setSelectedPreset(preset.value);
+
+    if (isCryptoPayment(payWay)) {
+      await getAmount(preset.value, payWay);
+      return;
+    }
 
     // 计算实际支付金额，考虑折扣
     const discount = preset.discount || topupInfo.discount[preset.value] || 1.0;
@@ -693,7 +726,9 @@ const TopUp = () => {
         payWay={payWay}
         payMethods={payMethods}
         amountNumber={amount}
-        discountRate={topupInfo?.discount?.[topUpCount] || 1.0}
+        discountRate={
+          isCryptoPayment(payWay) ? 1.0 : topupInfo?.discount?.[topUpCount] || 1.0
+        }
       />
 
       {/* 充值账单模态框 */}
@@ -702,6 +737,42 @@ const TopUp = () => {
         onCancel={handleHistoryCancel}
         t={t}
       />
+
+      <Modal
+        title={t('数字货币支付')}
+        visible={cryptoPaymentOpen}
+        onCancel={handleCryptoPaymentCancel}
+        onOk={handleCryptoPaymentCancel}
+        okText={t('我知道了')}
+        cancelButtonProps={{ style: { display: 'none' } }}
+        maskClosable={false}
+        centered
+      >
+        {cryptoPaymentData && (
+          <>
+            <p>
+              {t('订单号')}：<strong>{cryptoPaymentData.trade_no}</strong>
+            </p>
+            <p>
+              {t('支付网络')}：{cryptoPaymentData.chain}
+            </p>
+            <p>
+              {t('支付币种')}：{cryptoPaymentData.token}
+            </p>
+            <p>
+              {t('应付金额')}：{cryptoPaymentData.amount}{' '}
+              {cryptoPaymentData.token}
+            </p>
+            <p>
+              {t('参考法币金额')}：{cryptoPaymentData.amount_fiat} {t('元')}
+            </p>
+            <p>
+              {t('收款地址')}：{cryptoPaymentData.address}
+            </p>
+            <p>{cryptoPaymentData.instruction}</p>
+          </>
+        )}
+      </Modal>
 
       {/* Creem 充值确认模态框 */}
       <Modal

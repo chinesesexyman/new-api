@@ -40,6 +40,15 @@ const PaymentSetting = () => {
     PayMethods: '',
     AmountOptions: '',
     AmountDiscount: '',
+    EthRPCURL: '',
+    SolanaRPCURL: '',
+    CryptoOrderExpireMinutes: 10,
+    CryptoMonitorInterval: 30,
+    CryptoMonitorLookback: 5000,
+    CryptoMonitorConfirmations: 12,
+    CryptoWallets: '',
+    CryptoTokenConfigs: '',
+    CryptoPaymentInstruction: '',
 
     StripeApiSecret: '',
     StripeWebhookSecret: '',
@@ -93,6 +102,49 @@ const PaymentSetting = () => {
               console.error('解析AmountDiscount出错:', error);
               newInputs['AmountDiscount'] = item.value;
             }
+            break;
+          case 'payment_setting.eth_rpc_url':
+            newInputs['EthRPCURL'] = item.value;
+            break;
+          case 'payment_setting.solana_rpc_url':
+            newInputs['SolanaRPCURL'] = item.value;
+            break;
+          case 'payment_setting.crypto_order_expire_minutes':
+            newInputs['CryptoOrderExpireMinutes'] = parseFloat(item.value);
+            break;
+          case 'payment_setting.crypto_monitor_interval':
+            newInputs['CryptoMonitorInterval'] = parseFloat(item.value);
+            break;
+          case 'payment_setting.crypto_monitor_lookback':
+            newInputs['CryptoMonitorLookback'] = parseFloat(item.value);
+            break;
+          case 'payment_setting.crypto_monitor_confirmations':
+            newInputs['CryptoMonitorConfirmations'] = parseFloat(item.value);
+            break;
+          case 'payment_setting.crypto_wallets':
+            try {
+              newInputs['CryptoWallets'] = JSON.stringify(
+                JSON.parse(item.value),
+                null,
+                2,
+              );
+            } catch (error) {
+              newInputs['CryptoWallets'] = item.value;
+            }
+            break;
+          case 'payment_setting.crypto_token_configs':
+            try {
+              newInputs['CryptoTokenConfigs'] = JSON.stringify(
+                JSON.parse(item.value),
+                null,
+                2,
+              );
+            } catch (error) {
+              newInputs['CryptoTokenConfigs'] = item.value;
+            }
+            break;
+          case 'payment_setting.crypto_payment_instruction':
+            newInputs['CryptoPaymentInstruction'] = item.value;
             break;
           case 'Price':
           case 'MinTopUp':

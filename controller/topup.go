@@ -24,7 +24,8 @@ import (
 
 func GetTopUpInfo(c *gin.Context) {
 	// 获取支付方式
-	payMethods := operation_setting.PayMethods
+	payMethods := append([]map[string]string{}, operation_setting.PayMethods...)
+	payMethods = appendCryptoPayMethods(payMethods)
 
 	// 如果启用了 Stripe 支付，添加到支付方法列表
 	if setting.StripeApiSecret != "" && setting.StripeWebhookSecret != "" && setting.StripePriceId != "" {
@@ -49,7 +50,7 @@ func GetTopUpInfo(c *gin.Context) {
 	}
 
 	data := gin.H{
-		"enable_online_topup": operation_setting.PayAddress != "" && operation_setting.EpayId != "" && operation_setting.EpayKey != "",
+		"enable_online_topup": (operation_setting.PayAddress != "" && operation_setting.EpayId != "" && operation_setting.EpayKey != "") || len(getEnabledCryptoPaymentMethods()) > 0,
 		"enable_stripe_topup": setting.StripeApiSecret != "" && setting.StripeWebhookSecret != "" && setting.StripePriceId != "",
 		"enable_creem_topup":  setting.CreemApiKey != "" && setting.CreemProducts != "[]",
 		"creem_products":      setting.CreemProducts,
@@ -68,7 +69,8 @@ type EpayRequest struct {
 }
 
 type AmountRequest struct {
-	Amount int64 `json:"amount"`
+	Amount        int64  `json:"amount"`
+	PaymentMethod string `json:"payment_method"`
 }
 
 func GetEpayClient() *epay.Client {
@@ -151,6 +153,11 @@ func RequestEpay(c *gin.Context) {
 
 	if !operation_setting.ContainsPayMethod(req.PaymentMethod) {
 		c.JSON(200, gin.H{"message": "error", "data": "支付方式不存在"})
+		return
+	}
+
+	if _, ok := findCryptoPaymentMethod(req.PaymentMethod); ok {
+		requestCryptoPay(c, &req, payMoney, group)
 		return
 	}
 
@@ -333,6 +340,15 @@ func RequestAmount(c *gin.Context) {
 	payMoney := getPayMoney(req.Amount, group)
 	if payMoney <= 0.01 {
 		c.JSON(200, gin.H{"message": "error", "data": "充值金额过低"})
+		return
+	}
+	if cryptoMethod, ok := findCryptoPaymentMethod(req.PaymentMethod); ok {
+		cryptoAmount, err := getCryptoPayAmountByTopupAmount(req.Amount, group, cryptoMethod)
+		if err != nil {
+			c.JSON(200, gin.H{"message": "error", "data": "数字货币支付配置错误"})
+			return
+		}
+		c.JSON(200, gin.H{"message": "success", "data": strconv.FormatFloat(cryptoAmount, 'f', -1, 64)})
 		return
 	}
 	c.JSON(200, gin.H{"message": "success", "data": strconv.FormatFloat(payMoney, 'f', 2, 64)})

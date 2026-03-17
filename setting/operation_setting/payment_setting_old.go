@@ -55,5 +55,9 @@ func ContainsPayMethod(method string) bool {
 			return true
 		}
 	}
-	return false
+	chain := GetCryptoChainByMethod(method)
+	if chain == "" {
+		return false
+	}
+	return len(GetCryptoWalletsByChain(chain)) > 0 && GetCryptoTokenConfig(method) != nil
 }

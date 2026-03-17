@@ -18,7 +18,20 @@ For commercial licensing, please contact support@quantumnous.com
 */
 
 import React, { useEffect, useState, useRef } from 'react';
-import { Button, Form, Row, Col, Typography, Spin } from '@douyinfe/semi-ui';
+import {
+  Button,
+  Form,
+  Row,
+  Col,
+  Typography,
+  Spin,
+  Select,
+  Space,
+  Switch,
+  Input,
+  InputNumber,
+} from '@douyinfe/semi-ui';
+import { IconDelete, IconPlus } from '@douyinfe/semi-icons';
 const { Text } = Typography;
 import {
   API,
@@ -31,6 +44,16 @@ import { useTranslation } from 'react-i18next';
 
 export default function SettingsPaymentGateway(props) {
   const { t } = useTranslation();
+  const cryptoChainOptions = [
+    { label: 'Ethereum', value: 'ethereum' },
+    { label: 'Solana', value: 'solana' },
+  ];
+  const cryptoMethodOptions = [
+    { label: 'USDT (ETH)', value: 'eth_usdt' },
+    { label: 'USDC (ETH)', value: 'eth_usdc' },
+    { label: 'USDT (Solana)', value: 'solana_usdt' },
+    { label: 'USDC (Solana)', value: 'solana_usdc' },
+  ];
   const [loading, setLoading] = useState(false);
   const [inputs, setInputs] = useState({
     PayAddress: '',
@@ -43,9 +66,126 @@ export default function SettingsPaymentGateway(props) {
     PayMethods: '',
     AmountOptions: '',
     AmountDiscount: '',
+    EthRPCURL: '',
+    SolanaRPCURL: '',
+    CryptoOrderExpireMinutes: 10,
+    CryptoMonitorInterval: 30,
+    CryptoMonitorLookback: 5000,
+    CryptoMonitorConfirmations: 12,
+    CryptoWallets: '',
+    CryptoTokenConfigs: '',
+    CryptoPaymentInstruction: '',
   });
+  const [cryptoWalletRows, setCryptoWalletRows] = useState([]);
+  const [cryptoTokenRows, setCryptoTokenRows] = useState([]);
   const [originInputs, setOriginInputs] = useState({});
   const formApiRef = useRef(null);
+
+  const parseJSONArray = (value, fallback = []) => {
+    if (!value || !value.trim()) return fallback;
+    try {
+      const parsed = JSON.parse(value);
+      return Array.isArray(parsed) ? parsed : fallback;
+    } catch {
+      return fallback;
+    }
+  };
+
+  const toPrettyJSON = (value) => JSON.stringify(value, null, 2);
+
+  const normalizeCryptoWalletRows = (rows) =>
+    rows
+      .filter((item) => item.chain && item.address && item.enabled !== undefined)
+      .map((item) => ({
+        chain: item.chain,
+        label: item.label || '',
+        address: item.address,
+        enabled: item.enabled !== false,
+      }));
+
+  const normalizeCryptoTokenRows = (rows) =>
+    rows
+      .filter((item) => item.method && item.contract_address)
+      .map((item) => ({
+        method: item.method,
+        contract_address: item.contract_address,
+        decimals: Number(item.decimals ?? 6),
+      }));
+
+  const serializeCryptoWalletRows = (rows) =>
+    toPrettyJSON(normalizeCryptoWalletRows(rows));
+
+  const serializeCryptoTokenRows = (rows) =>
+    toPrettyJSON(normalizeCryptoTokenRows(rows));
+
+  const validateCryptoWalletRows = () => {
+    const seen = new Set();
+    for (let index = 0; index < cryptoWalletRows.length; index++) {
+      const row = cryptoWalletRows[index];
+      const chain = (row.chain || '').trim();
+      const label = (row.label || '').trim();
+      const address = (row.address || '').trim();
+      const enabled = row.enabled !== false;
+      const hasAnyValue = chain || label || address || enabled;
+
+      if (!hasAnyValue) {
+        continue;
+      }
+      if (!chain || !address) {
+        return t('收款钱包池存在未填写完整的行，请填写链和收款地址');
+      }
+
+      const key = `${chain}::${address.toLowerCase()}`;
+      if (seen.has(key)) {
+        return t('收款钱包池中存在重复的钱包地址配置');
+      }
+      seen.add(key);
+    }
+    return '';
+  };
+
+  const validateCryptoTokenRows = () => {
+    const seenMethods = new Set();
+    for (let index = 0; index < cryptoTokenRows.length; index++) {
+      const row = cryptoTokenRows[index];
+      const method = (row.method || '').trim();
+      const contractAddress = (row.contract_address || '').trim();
+      const decimals = Number(row.decimals);
+      const hasAnyValue =
+        method || contractAddress || row.decimals !== undefined;
+
+      if (!hasAnyValue) {
+        continue;
+      }
+      if (!method || !contractAddress) {
+        return t('代币配置存在未填写完整的行，请填写支付方式和合约地址');
+      }
+      if (!Number.isInteger(decimals) || decimals < 0 || decimals > 18) {
+        return t('代币配置中的精度必须是 0 到 18 之间的整数');
+      }
+      if (seenMethods.has(method)) {
+        return t('代币配置中存在重复的支付方式');
+      }
+      seenMethods.add(method);
+    }
+    return '';
+  };
+
+  const syncCryptoWallets = (rows) => {
+    setCryptoWalletRows(rows);
+    setInputs((prev) => ({
+      ...prev,
+      CryptoWallets: serializeCryptoWalletRows(rows),
+    }));
+  };
+
+  const syncCryptoTokens = (rows) => {
+    setCryptoTokenRows(rows);
+    setInputs((prev) => ({
+      ...prev,
+      CryptoTokenConfigs: serializeCryptoTokenRows(rows),
+    }));
+  };
 
   useEffect(() => {
     if (props.options && formApiRef.current) {
@@ -66,6 +206,27 @@ export default function SettingsPaymentGateway(props) {
         PayMethods: props.options.PayMethods || '',
         AmountOptions: props.options.AmountOptions || '',
         AmountDiscount: props.options.AmountDiscount || '',
+        EthRPCURL: props.options.EthRPCURL || '',
+        SolanaRPCURL: props.options.SolanaRPCURL || '',
+        CryptoOrderExpireMinutes:
+          props.options.CryptoOrderExpireMinutes !== undefined
+            ? parseFloat(props.options.CryptoOrderExpireMinutes)
+            : 10,
+        CryptoMonitorInterval:
+          props.options.CryptoMonitorInterval !== undefined
+            ? parseFloat(props.options.CryptoMonitorInterval)
+            : 30,
+        CryptoMonitorLookback:
+          props.options.CryptoMonitorLookback !== undefined
+            ? parseFloat(props.options.CryptoMonitorLookback)
+            : 5000,
+        CryptoMonitorConfirmations:
+          props.options.CryptoMonitorConfirmations !== undefined
+            ? parseFloat(props.options.CryptoMonitorConfirmations)
+            : 12,
+        CryptoWallets: props.options.CryptoWallets || '',
+        CryptoTokenConfigs: props.options.CryptoTokenConfigs || '',
+        CryptoPaymentInstruction: props.options.CryptoPaymentInstruction || '',
       };
 
       // 美化 JSON 展示
@@ -87,15 +248,107 @@ export default function SettingsPaymentGateway(props) {
           );
         }
       } catch {}
+      try {
+        if (currentInputs.CryptoWallets) {
+          currentInputs.CryptoWallets = JSON.stringify(
+            JSON.parse(currentInputs.CryptoWallets),
+            null,
+            2,
+          );
+        }
+      } catch {}
+      try {
+        if (currentInputs.CryptoTokenConfigs) {
+          currentInputs.CryptoTokenConfigs = JSON.stringify(
+            JSON.parse(currentInputs.CryptoTokenConfigs),
+            null,
+            2,
+          );
+        }
+      } catch {}
 
       setInputs(currentInputs);
+      setCryptoWalletRows(
+        parseJSONArray(currentInputs.CryptoWallets, []).map((item) => ({
+          chain: item.chain || '',
+          label: item.label || '',
+          address: item.address || '',
+          enabled: item.enabled !== false,
+        })),
+      );
+      setCryptoTokenRows(
+        parseJSONArray(currentInputs.CryptoTokenConfigs, []).map((item) => ({
+          method: item.method || '',
+          contract_address: item.contract_address || '',
+          decimals:
+            item.decimals !== undefined && item.decimals !== null
+              ? Number(item.decimals)
+              : 6,
+        })),
+      );
       setOriginInputs({ ...currentInputs });
       formApiRef.current.setValues(currentInputs);
     }
   }, [props.options]);
 
   const handleFormChange = (values) => {
-    setInputs(values);
+    setInputs((prev) => ({
+      ...prev,
+      ...values,
+      CryptoWallets:
+        values.CryptoWallets !== undefined
+          ? values.CryptoWallets
+          : prev.CryptoWallets,
+      CryptoTokenConfigs:
+        values.CryptoTokenConfigs !== undefined
+          ? values.CryptoTokenConfigs
+          : prev.CryptoTokenConfigs,
+    }));
+  };
+
+  const updateWalletRow = (index, patch) => {
+    const nextRows = cryptoWalletRows.map((row, rowIndex) =>
+      rowIndex === index ? { ...row, ...patch } : row,
+    );
+    syncCryptoWallets(nextRows);
+  };
+
+  const addWalletRow = () => {
+    syncCryptoWallets([
+      ...cryptoWalletRows,
+      {
+        chain: 'ethereum',
+        label: '',
+        address: '',
+        enabled: true,
+      },
+    ]);
+  };
+
+  const removeWalletRow = (index) => {
+    syncCryptoWallets(cryptoWalletRows.filter((_, rowIndex) => rowIndex !== index));
+  };
+
+  const updateTokenRow = (index, patch) => {
+    const nextRows = cryptoTokenRows.map((row, rowIndex) =>
+      rowIndex === index ? { ...row, ...patch } : row,
+    );
+    syncCryptoTokens(nextRows);
+  };
+
+  const addTokenRow = () => {
+    syncCryptoTokens([
+      ...cryptoTokenRows,
+      {
+        method: 'eth_usdt',
+        contract_address: '',
+        decimals: 6,
+      },
+    ]);
+  };
+
+  const removeTokenRow = (index) => {
+    syncCryptoTokens(cryptoTokenRows.filter((_, rowIndex) => rowIndex !== index));
   };
 
   const submitPayAddress = async () => {
@@ -103,6 +356,21 @@ export default function SettingsPaymentGateway(props) {
       showError(t('请先填写服务器地址'));
       return;
     }
+
+    const walletValidationError = validateCryptoWalletRows();
+    if (walletValidationError) {
+      showError(walletValidationError);
+      return;
+    }
+
+    const tokenValidationError = validateCryptoTokenRows();
+    if (tokenValidationError) {
+      showError(tokenValidationError);
+      return;
+    }
+
+    const cryptoWalletsValue = serializeCryptoWalletRows(cryptoWalletRows);
+    const cryptoTokenConfigsValue = serializeCryptoTokenRows(cryptoTokenRows);
 
     if (originInputs['TopupGroupRatio'] !== inputs.TopupGroupRatio) {
       if (!verifyJSON(inputs.TopupGroupRatio)) {
@@ -180,6 +448,69 @@ export default function SettingsPaymentGateway(props) {
           value: inputs.AmountDiscount,
         });
       }
+      if (originInputs['EthRPCURL'] !== inputs.EthRPCURL) {
+        options.push({
+          key: 'payment_setting.eth_rpc_url',
+          value: inputs.EthRPCURL,
+        });
+      }
+      if (originInputs['SolanaRPCURL'] !== inputs.SolanaRPCURL) {
+        options.push({
+          key: 'payment_setting.solana_rpc_url',
+          value: inputs.SolanaRPCURL,
+        });
+      }
+      if (
+        originInputs['CryptoOrderExpireMinutes'] !==
+        inputs.CryptoOrderExpireMinutes
+      ) {
+        options.push({
+          key: 'payment_setting.crypto_order_expire_minutes',
+          value: String(inputs.CryptoOrderExpireMinutes),
+        });
+      }
+      if (
+        originInputs['CryptoMonitorInterval'] !== inputs.CryptoMonitorInterval
+      ) {
+        options.push({
+          key: 'payment_setting.crypto_monitor_interval',
+          value: String(inputs.CryptoMonitorInterval),
+        });
+      }
+      if (
+        originInputs['CryptoMonitorLookback'] !== inputs.CryptoMonitorLookback
+      ) {
+        options.push({
+          key: 'payment_setting.crypto_monitor_lookback',
+          value: String(inputs.CryptoMonitorLookback),
+        });
+      }
+      if (
+        originInputs['CryptoMonitorConfirmations'] !==
+        inputs.CryptoMonitorConfirmations
+      ) {
+        options.push({
+          key: 'payment_setting.crypto_monitor_confirmations',
+          value: String(inputs.CryptoMonitorConfirmations),
+        });
+      }
+      options.push({
+        key: 'payment_setting.crypto_wallets',
+        value: cryptoWalletsValue,
+      });
+      options.push({
+        key: 'payment_setting.crypto_token_configs',
+        value: cryptoTokenConfigsValue,
+      });
+      if (
+        originInputs['CryptoPaymentInstruction'] !==
+        inputs.CryptoPaymentInstruction
+      ) {
+        options.push({
+          key: 'payment_setting.crypto_payment_instruction',
+          value: inputs.CryptoPaymentInstruction,
+        });
+      }
 
       // 发送请求
       const requestQueue = options.map((opt) =>
@@ -200,7 +531,11 @@ export default function SettingsPaymentGateway(props) {
       } else {
         showSuccess(t('更新成功'));
         // 更新本地存储的原始值
-        setOriginInputs({ ...inputs });
+        setOriginInputs({
+          ...inputs,
+          CryptoWallets: cryptoWalletsValue,
+          CryptoTokenConfigs: cryptoTokenConfigsValue,
+        });
         props.refresh && props.refresh();
       }
     } catch (error) {
@@ -219,7 +554,7 @@ export default function SettingsPaymentGateway(props) {
         <Form.Section text={t('支付设置')}>
           <Text>
             {t(
-              '（当前仅支持易支付接口，默认使用上方服务器地址作为回调地址！）',
+              '（支持易支付与链上稳定币支付；链上订单会在监听到到账并确认后自动入账。）',
             )}
           </Text>
           <Row gutter={{ xs: 8, sm: 16, md: 24, lg: 24, xl: 24, xxl: 24 }}>
@@ -285,6 +620,230 @@ export default function SettingsPaymentGateway(props) {
             placeholder={t('为一个 JSON 文本')}
             autosize
           />
+          <Row
+            gutter={{ xs: 8, sm: 16, md: 24, lg: 24, xl: 24, xxl: 24 }}
+            style={{ marginTop: 16 }}
+          >
+            <Col xs={24} sm={24} md={12} lg={12} xl={12}>
+              <Form.Input
+                field='EthRPCURL'
+                label={t('ETH RPC 地址')}
+                placeholder={t('例如：https://mainnet.infura.io/v3/xxx')}
+              />
+            </Col>
+            <Col xs={24} sm={24} md={12} lg={12} xl={12}>
+              <Form.Input
+                field='SolanaRPCURL'
+                label={t('Solana RPC 地址')}
+                placeholder={t('例如：https://api.mainnet-beta.solana.com')}
+              />
+            </Col>
+          </Row>
+          <Row
+            gutter={{ xs: 8, sm: 16, md: 24, lg: 24, xl: 24, xxl: 24 }}
+            style={{ marginTop: 16 }}
+          >
+            <Col xs={24} sm={24} md={8} lg={8} xl={8}>
+              <Form.InputNumber
+                field='CryptoOrderExpireMinutes'
+                label={t('数字货币订单过期时间（分钟）')}
+                min={1}
+              />
+            </Col>
+            <Col xs={24} sm={24} md={8} lg={8} xl={8}>
+              <Form.InputNumber
+                field='CryptoMonitorInterval'
+                label={t('监听轮询间隔（秒）')}
+                min={5}
+              />
+            </Col>
+            <Col xs={24} sm={24} md={8} lg={8} xl={8}>
+              <Form.InputNumber
+                field='CryptoMonitorLookback'
+                label={t('监听回溯范围')}
+                min={10}
+              />
+            </Col>
+          </Row>
+          <Row
+            gutter={{ xs: 8, sm: 16, md: 24, lg: 24, xl: 24, xxl: 24 }}
+            style={{ marginTop: 16 }}
+          >
+            <Col xs={24} sm={24} md={8} lg={8} xl={8}>
+              <Form.InputNumber
+                field='CryptoMonitorConfirmations'
+                label={t('ETH 确认块数')}
+                min={0}
+              />
+            </Col>
+          </Row>
+          <div style={{ marginTop: 16 }}>
+            <div className='flex items-center justify-between mb-3'>
+              <Text strong>{t('数字货币收款钱包池')}</Text>
+              <Button icon={<IconPlus />} theme='light' onClick={addWalletRow}>
+                {t('新增钱包')}
+              </Button>
+            </div>
+            <Text type='secondary'>
+              {t(
+                '按链配置钱包池，同一链地址同时接收 USDT 和 USDC；Solana 填主地址即可，系统会自动识别对应代币账户。',
+              )}
+            </Text>
+            <div className='space-y-3 mt-3'>
+              {cryptoWalletRows.length === 0 ? (
+                <div className='text-gray-500 text-sm p-3 bg-gray-50 rounded-lg border border-dashed border-gray-300'>
+                  {t('暂无钱包配置，点击右上角新增钱包')}
+                </div>
+              ) : (
+                cryptoWalletRows.map((row, index) => (
+                  <div
+                    key={`wallet-${index}`}
+                    className='rounded-lg border border-gray-200 p-3'
+                  >
+                    <Row gutter={12} align='middle'>
+                      <Col xs={24} md={6}>
+                        <Select
+                          value={row.chain}
+                          optionList={cryptoChainOptions}
+                          onChange={(value) =>
+                            updateWalletRow(index, { chain: value })
+                          }
+                          placeholder={t('链')}
+                          style={{ width: '100%' }}
+                        />
+                      </Col>
+                      <Col xs={24} md={5}>
+                        <Input
+                          value={row.label}
+                          placeholder={t('钱包标签')}
+                          onChange={(value) =>
+                            updateWalletRow(index, { label: value })
+                          }
+                        />
+                      </Col>
+                      <Col xs={24} md={9}>
+                        <Input
+                          value={row.address}
+                          placeholder={t('收款地址')}
+                          onChange={(value) =>
+                            updateWalletRow(index, { address: value })
+                          }
+                        />
+                      </Col>
+                      <Col xs={12} md={2}>
+                        <Space>
+                          <Text>{t('启用')}</Text>
+                          <Switch
+                            checked={row.enabled}
+                            onChange={(checked) =>
+                              updateWalletRow(index, { enabled: checked })
+                            }
+                          />
+                        </Space>
+                      </Col>
+                      <Col xs={12} md={2}>
+                        <Button
+                          icon={<IconDelete />}
+                          theme='borderless'
+                          type='danger'
+                          onClick={() => removeWalletRow(index)}
+                        />
+                      </Col>
+                    </Row>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          <div style={{ marginTop: 16 }}>
+            <div className='flex items-center justify-between mb-3'>
+              <Text strong>{t('数字货币代币配置')}</Text>
+              <Button icon={<IconPlus />} theme='light' onClick={addTokenRow}>
+                {t('新增代币')}
+              </Button>
+            </div>
+            <Text type='secondary'>
+              {t(
+                '可自定义 ETH 合约地址或 Solana mint 地址，方便测试网或自定义稳定币环境。',
+              )}
+            </Text>
+            <div className='space-y-3 mt-3'>
+              {cryptoTokenRows.length === 0 ? (
+                <div className='text-gray-500 text-sm p-3 bg-gray-50 rounded-lg border border-dashed border-gray-300'>
+                  {t('暂无代币配置，点击右上角新增代币')}
+                </div>
+              ) : (
+                cryptoTokenRows.map((row, index) => (
+                  <div
+                    key={`token-${index}`}
+                    className='rounded-lg border border-gray-200 p-3'
+                  >
+                    <Row gutter={12} align='middle'>
+                      <Col xs={24} md={6}>
+                        <Select
+                          value={row.method}
+                          optionList={cryptoMethodOptions}
+                          onChange={(value) =>
+                            updateTokenRow(index, { method: value })
+                          }
+                          placeholder={t('支付方式')}
+                          style={{ width: '100%' }}
+                        />
+                      </Col>
+                      <Col xs={24} md={12}>
+                        <Input
+                          value={row.contract_address}
+                          placeholder={t('合约地址 / Mint 地址')}
+                          onChange={(value) =>
+                            updateTokenRow(index, { contract_address: value })
+                          }
+                        />
+                      </Col>
+                      <Col xs={12} md={4}>
+                        <InputNumber
+                          value={row.decimals}
+                          min={0}
+                          max={18}
+                          placeholder={t('精度')}
+                          onChange={(value) =>
+                            updateTokenRow(index, { decimals: Number(value || 0) })
+                          }
+                          style={{ width: '100%' }}
+                        />
+                      </Col>
+                      <Col xs={12} md={2}>
+                        <Button
+                          icon={<IconDelete />}
+                          theme='borderless'
+                          type='danger'
+                          onClick={() => removeTokenRow(index)}
+                        />
+                      </Col>
+                    </Row>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+          <Row
+            gutter={{ xs: 8, sm: 16, md: 24, lg: 24, xl: 24, xxl: 24 }}
+            style={{ marginTop: 16 }}
+          >
+            <Col span={24}>
+              <Form.TextArea
+                field='CryptoPaymentInstruction'
+                label={t('数字货币支付说明')}
+                placeholder={t(
+                  '例如：请严格按订单金额转账，系统将在监听到到账并确认后自动入账。',
+                )}
+                autosize
+                extraText={t(
+                  'ETH 和 Solana 都填写主收款地址；同链 USDT/USDC 共用同一个地址，Solana 会自动根据 mint 查找对应代币账户。',
+                )}
+              />
+            </Col>
+          </Row>
 
           <Row
             gutter={{ xs: 8, sm: 16, md: 24, lg: 24, xl: 24, xxl: 24 }}
