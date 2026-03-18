@@ -59,6 +59,9 @@ var (
 
 func StartCryptoPaymentMonitorTask() {
 	cryptoMonitorOnce.Do(func() {
+		if !common.IsMasterNode {
+			return
+		}
 		go func() {
 			logger.LogInfo(context.Background(), "crypto payment monitor task started")
 			for {
