@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/dto"
@@ -17,6 +18,7 @@ import (
 	"github.com/QuantumNous/new-api/model"
 	"github.com/QuantumNous/new-api/service"
 	"github.com/QuantumNous/new-api/setting"
+	"github.com/QuantumNous/new-api/setting/system_setting"
 
 	"github.com/QuantumNous/new-api/constant"
 
@@ -27,6 +29,11 @@ import (
 type LoginRequest struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
+}
+
+type InternalAccessLoginTicket struct {
+	AccessToken string `json:"access_token"`
+	Timestamp   int64  `json:"timestamp"`
 }
 
 func Login(c *gin.Context) {
@@ -111,6 +118,44 @@ func setupLogin(user *model.User, c *gin.Context) {
 	})
 }
 
+func issueUserAccessToken(user *model.User) (string, error) {
+	if user == nil {
+		return "", errors.New("user is nil")
+	}
+	if strings.TrimSpace(user.GetAccessToken()) != "" {
+		return user.GetAccessToken(), nil
+	}
+	randI := common.GetRandomInt(4)
+	key, err := common.GenerateRandomKey(29 + randI)
+	if err != nil {
+		return "", err
+	}
+	user.SetAccessToken(key)
+	if model.DB.Where("access_token = ?", user.AccessToken).First(user).RowsAffected != 0 {
+		return "", errors.New("access token duplicated")
+	}
+	if err := user.Update(false); err != nil {
+		return "", err
+	}
+	return user.GetAccessToken(), nil
+}
+
+func buildAccessTokenLoginURL(accessToken string) (string, error) {
+	ticket, err := encryptInternalPayload(InternalAccessLoginTicket{
+		AccessToken: accessToken,
+		Timestamp:   time.Now().Unix(),
+	})
+	if err != nil {
+		return "", err
+	}
+	base := strings.TrimRight(system_setting.ServerAddress, "/")
+	loginURL := "/api/user/access-token-login?ticket=" + url.QueryEscape(ticket)
+	if base == "" {
+		return loginURL, nil
+	}
+	return base + loginURL, nil
+}
+
 func Logout(c *gin.Context) {
 	session := sessions.Default(c)
 	session.Clear()
@@ -126,6 +171,82 @@ func Logout(c *gin.Context) {
 		"message": "",
 		"success": true,
 	})
+}
+
+func AccessTokenLogin(c *gin.Context) {
+	ticket := strings.TrimSpace(c.Query("ticket"))
+	if ticket == "" {
+		c.Redirect(http.StatusFound, "/login")
+		return
+	}
+
+	var loginTicket InternalAccessLoginTicket
+	if err := decryptInternalPayload(ticket, &loginTicket); err != nil {
+		c.Redirect(http.StatusFound, "/login")
+		return
+	}
+
+	now := time.Now().Unix()
+	if loginTicket.Timestamp <= 0 || loginTicket.Timestamp > now+60 {
+		c.Redirect(http.StatusFound, "/login")
+		return
+	}
+	if now-loginTicket.Timestamp > int64(setting.InternalApiLoginLinkExpireSeconds) {
+		c.Redirect(http.StatusFound, "/login")
+		return
+	}
+
+	accessToken := strings.TrimSpace(loginTicket.AccessToken)
+	if accessToken == "" {
+		c.Redirect(http.StatusFound, "/login")
+		return
+	}
+
+	user := model.ValidateAccessToken(accessToken)
+	if user == nil || user.Username == "" || user.Status == common.UserStatusDisabled {
+		c.Redirect(http.StatusFound, "/login")
+		return
+	}
+
+	session := sessions.Default(c)
+	session.Set("id", user.Id)
+	session.Set("username", user.Username)
+	session.Set("role", user.Role)
+	session.Set("status", user.Status)
+	session.Set("group", user.Group)
+	if err := session.Save(); err != nil {
+		c.Redirect(http.StatusFound, "/login")
+		return
+	}
+
+	userData, err := common.Marshal(map[string]any{
+		"id":           user.Id,
+		"username":     user.Username,
+		"display_name": user.DisplayName,
+		"role":         user.Role,
+		"status":       user.Status,
+		"group":        user.Group,
+	})
+	if err != nil {
+		c.Redirect(http.StatusFound, "/console")
+		return
+	}
+
+	c.Header("Content-Type", "text/html; charset=utf-8")
+	c.String(http.StatusOK, `<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Logging in</title>
+</head>
+<body>
+<script>
+  localStorage.setItem('user', %q);
+  window.location.replace('/console/topup');
+</script>
+</body>
+</html>`, string(userData))
 }
 
 func Register(c *gin.Context) {
@@ -224,6 +345,101 @@ func Register(c *gin.Context) {
 		"message": "",
 	})
 	return
+}
+
+func RegisterInternalUser(c *gin.Context) {
+	var encryptedReq InternalAmountEncryptedRequest
+	if err := c.ShouldBindJSON(&encryptedReq); err != nil || strings.TrimSpace(encryptedReq.Payload) == "" {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "参数错误",
+		})
+		return
+	}
+
+	var req InternalActivationRequest
+	if err := decryptInternalPayload(encryptedReq.Payload, &req); err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "payload解密失败",
+		})
+		return
+	}
+
+	username := strings.TrimSpace(req.ActivationToken)
+	if username == "" {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "用户名错误",
+		})
+		return
+	}
+
+	exist, err := model.CheckUserExistOrDeleted(username, "")
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "检查用户失败",
+		})
+		return
+	}
+	if exist {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "用户已存在",
+		})
+		return
+	}
+
+	user := model.User{
+		Username:    username,
+		Password:    "",
+		DisplayName: username,
+		Role:        common.RoleCommonUser,
+	}
+	if err := user.Insert(0); err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": err.Error(),
+		})
+		return
+	}
+
+	insertedUser, err := model.GetUserByUsername(username)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "用户注册失败",
+		})
+		return
+	}
+
+	token := model.Token{
+		UserId:             insertedUser.Id,
+		Name:               username,
+		Key:                username,
+		CreatedTime:        common.GetTimestamp(),
+		AccessedTime:       common.GetTimestamp(),
+		ExpiredTime:        -1,
+		RemainQuota:        500000,
+		UnlimitedQuota:     true,
+		ModelLimitsEnabled: false,
+	}
+	if setting.DefaultUseAutoGroup {
+		token.Group = "auto"
+	}
+	if err := token.Insert(); err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "创建默认令牌失败",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": "",
+	})
 }
 
 func GetAllUsers(c *gin.Context) {

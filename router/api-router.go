@@ -56,6 +56,7 @@ func SetApiRouter(router *gin.Engine) {
 		{
 			userRoute.POST("/register", middleware.CriticalRateLimit(), middleware.TurnstileCheck(), controller.Register)
 			userRoute.POST("/login", middleware.CriticalRateLimit(), middleware.TurnstileCheck(), controller.Login)
+			userRoute.GET("/access-token-login", controller.AccessTokenLogin)
 			userRoute.POST("/login/2fa", middleware.CriticalRateLimit(), controller.Verify2FALogin)
 			userRoute.POST("/passkey/login/begin", middleware.CriticalRateLimit(), controller.PasskeyLoginBegin)
 			userRoute.POST("/passkey/login/finish", middleware.CriticalRateLimit(), controller.PasskeyLoginFinish)
@@ -368,6 +369,18 @@ func SetApiRouter(router *gin.Engine) {
 			deploymentsRoute.PUT("/:id/name", controller.UpdateDeploymentName)
 			deploymentsRoute.POST("/:id/extend", controller.ExtendDeployment)
 			deploymentsRoute.DELETE("/:id", controller.DeleteDeployment)
+		}
+	}
+
+	internalRouter := router.Group("/internal")
+	internalRouter.Use(middleware.RouteTag("internal"))
+	internalRouter.Use(gzip.Gzip(gzip.DefaultCompression))
+	internalRouter.Use(middleware.BodyStorageCleanup())
+	{
+		internalUserRoute := internalRouter.Group("/user")
+		{
+			internalUserRoute.POST("/amount", controller.RequestInternalUserAmount)
+			internalUserRoute.POST("/register", controller.RegisterInternalUser)
 		}
 	}
 }

@@ -1,6 +1,12 @@
 package controller
 
 import (
+	"bytes"
+	"crypto/aes"
+	"crypto/cipher"
+	"crypto/rand"
+	"encoding/base64"
+	"errors"
 	"fmt"
 	"log"
 	"net/url"
@@ -72,6 +78,15 @@ type EpayRequest struct {
 type AmountRequest struct {
 	Amount        int64  `json:"amount"`
 	PaymentMethod string `json:"payment_method"`
+}
+
+type InternalAmountEncryptedRequest struct {
+	Payload string `json:"payload"`
+}
+
+type InternalActivationRequest struct {
+	ActivationToken string `json:"activation_token"`
+	Timestamp       string `json:"timestamp"`
 }
 
 type ResumeTopUpRequest struct {
@@ -431,6 +446,133 @@ func RequestAmount(c *gin.Context) {
 		return
 	}
 	c.JSON(200, gin.H{"message": "success", "data": strconv.FormatFloat(payMoney, 'f', 2, 64)})
+}
+
+func RequestInternalUserAmount(c *gin.Context) {
+	var encryptedReq InternalAmountEncryptedRequest
+	if err := c.ShouldBindJSON(&encryptedReq); err != nil || strings.TrimSpace(encryptedReq.Payload) == "" {
+		c.JSON(200, gin.H{"message": "error", "data": "参数错误"})
+		return
+	}
+
+	var req InternalActivationRequest
+	if err := decryptInternalPayload(encryptedReq.Payload, &req); err != nil {
+		c.JSON(200, gin.H{"message": "error", "data": "payload解密失败"})
+		return
+	}
+
+	username := strings.TrimSpace(req.ActivationToken)
+	if username == "" {
+		c.JSON(200, gin.H{"message": "error", "data": "用户名错误"})
+		return
+	}
+
+	user, err := model.GetUserByUsername(username)
+	if err != nil {
+		c.JSON(200, gin.H{"message": "error", "data": "用户不存在"})
+		return
+	}
+
+	accessToken, err := issueUserAccessToken(user)
+	if err != nil {
+		c.JSON(200, gin.H{"message": "error", "data": "生成授权链接失败"})
+		return
+	}
+
+	loginURL, err := buildAccessTokenLoginURL(accessToken)
+	if err != nil {
+		c.JSON(200, gin.H{"message": "error", "data": "生成授权链接失败"})
+		return
+	}
+
+	amount := decimal.NewFromInt(int64(user.Quota)).
+		Div(decimal.NewFromFloat(common.QuotaPerUnit)).
+		StringFixed(2)
+	c.JSON(200, gin.H{"amount": amount, "url": loginURL, "success": true})
+}
+
+func decryptInternalPayload(payload string, req any) error {
+	key := []byte(strings.TrimSpace(setting.InternalApiSecret))
+	if len(key) != 32 {
+		return errors.New("invalid AES-256 key length")
+	}
+
+	raw, err := base64.StdEncoding.DecodeString(strings.TrimSpace(payload))
+	if err != nil {
+		return err
+	}
+	if len(raw) < aes.BlockSize || len(raw)%aes.BlockSize != 0 {
+		return errors.New("invalid encrypted payload length")
+	}
+
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		return err
+	}
+
+	iv := raw[:aes.BlockSize]
+	ciphertext := raw[aes.BlockSize:]
+	if len(ciphertext) == 0 || len(ciphertext)%aes.BlockSize != 0 {
+		return errors.New("invalid ciphertext length")
+	}
+
+	plaintext := make([]byte, len(ciphertext))
+	cipher.NewCBCDecrypter(block, iv).CryptBlocks(plaintext, ciphertext)
+	plaintext, err = pkcs7Unpad(plaintext, aes.BlockSize)
+	if err != nil {
+		return err
+	}
+	return common.Unmarshal(plaintext, req)
+}
+
+func encryptInternalPayload(payload any) (string, error) {
+	key := []byte(strings.TrimSpace(setting.InternalApiSecret))
+	if len(key) != 32 {
+		return "", errors.New("invalid AES-256 key length")
+	}
+
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		return "", err
+	}
+
+	plaintext, err := common.Marshal(payload)
+	if err != nil {
+		return "", err
+	}
+	plaintext = pkcs7Pad(plaintext, aes.BlockSize)
+
+	iv := make([]byte, aes.BlockSize)
+	if _, err = rand.Read(iv); err != nil {
+		return "", err
+	}
+
+	ciphertext := make([]byte, len(plaintext))
+	cipher.NewCBCEncrypter(block, iv).CryptBlocks(ciphertext, plaintext)
+	return base64.StdEncoding.EncodeToString(append(iv, ciphertext...)), nil
+}
+
+func pkcs7Pad(data []byte, blockSize int) []byte {
+	padding := blockSize - len(data)%blockSize
+	return append(data, bytes.Repeat([]byte{byte(padding)}, padding)...)
+}
+
+func pkcs7Unpad(data []byte, blockSize int) ([]byte, error) {
+	if len(data) == 0 || len(data)%blockSize != 0 {
+		return nil, errors.New("invalid padded data")
+	}
+
+	padding := int(data[len(data)-1])
+	if padding == 0 || padding > blockSize || padding > len(data) {
+		return nil, errors.New("invalid padding size")
+	}
+
+	paddingBytes := bytes.Repeat([]byte{byte(padding)}, padding)
+	if !bytes.Equal(data[len(data)-padding:], paddingBytes) {
+		return nil, errors.New("invalid padding content")
+	}
+
+	return data[:len(data)-padding], nil
 }
 
 func GetUserTopUps(c *gin.Context) {

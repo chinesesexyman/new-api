@@ -68,6 +68,24 @@ func UpdateOption(c *gin.Context) {
 		option.Value = fmt.Sprintf("%v", option.Value)
 	}
 	switch option.Key {
+	case "InternalApiSecret":
+		if len([]byte(option.Value.(string))) != 32 {
+			c.JSON(http.StatusOK, gin.H{
+				"success": false,
+				"message": "InternalApiSecret 必须为 32 字节",
+			})
+			return
+		}
+	case "InternalApiLoginLinkExpireSeconds":
+		seconds := 0
+		_, err := fmt.Sscanf(option.Value.(string), "%d", &seconds)
+		if err != nil || seconds <= 0 {
+			c.JSON(http.StatusOK, gin.H{
+				"success": false,
+				"message": "InternalApiLoginLinkExpireSeconds 必须为正整数",
+			})
+			return
+		}
 	case "GitHubOAuthEnabled":
 		if option.Value == "true" && common.GitHubClientId == "" {
 			c.JSON(http.StatusOK, gin.H{

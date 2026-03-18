@@ -71,6 +71,8 @@ const SystemSetting = () => {
     SMTPToken: '',
     WorkerUrl: '',
     WorkerValidKey: '',
+    InternalApiSecret: '',
+    InternalApiLoginLinkExpireSeconds: 600,
     WorkerAllowHttpImageRequestEnabled: '',
     Footer: '',
     WeChatAuthEnabled: '',
@@ -206,6 +208,7 @@ const SystemSetting = () => {
             break;
           case 'Price':
           case 'MinTopUp':
+          case 'InternalApiLoginLinkExpireSeconds':
             item.value = parseFloat(item.value);
             break;
           default:
@@ -297,6 +300,8 @@ const SystemSetting = () => {
     setInputs(values);
   };
 
+  const getUtf8ByteLength = (value) => new TextEncoder().encode(value || '').length;
+
   const submitWorker = async () => {
     let WorkerUrl = removeTrailingSlash(inputs.WorkerUrl);
     const options = [
@@ -310,6 +315,37 @@ const SystemSetting = () => {
       options.push({ key: 'WorkerValidKey', value: inputs.WorkerValidKey });
     }
     await updateOptions(options);
+  };
+
+  const submitInternalApiSecret = async () => {
+    const secret = inputs.InternalApiSecret || '';
+    if (secret === '') {
+      showError(t('请输入 Internal API 密钥'));
+      return;
+    }
+    if (getUtf8ByteLength(secret) !== 32) {
+      showError(t('Internal API 密钥必须为 32 字节'));
+      return;
+    }
+    await updateOptions([{ key: 'InternalApiSecret', value: secret }]);
+    if (formApiRef.current) {
+      formApiRef.current.setValue('InternalApiSecret', '');
+    }
+    setInputs((prev) => ({ ...prev, InternalApiSecret: '' }));
+  };
+
+  const submitInternalApiLoginSetting = async () => {
+    const seconds = Number(inputs.InternalApiLoginLinkExpireSeconds);
+    if (!Number.isInteger(seconds) || seconds <= 0) {
+      showError(t('Internal API 登录链接有效期必须为正整数秒'));
+      return;
+    }
+    await updateOptions([
+      {
+        key: 'InternalApiLoginLinkExpireSeconds',
+        value: String(seconds),
+      },
+    ]);
   };
 
   const submitServerAddress = async () => {
@@ -726,10 +762,37 @@ const SystemSetting = () => {
                         )}
                       />
                     </Col>
+                    <Col xs={24} sm={24} md={24} lg={24} xl={24}>
+                      <Form.Input
+                        field='InternalApiSecret'
+                        label={t('Internal API 密钥')}
+                        placeholder={t('请输入 32 字节密钥，敏感信息不会发送到前端显示')}
+                        type='password'
+                        extraText={t('用于 /internal 接口 payload 解密，必须为 32 字节')}
+                      />
+                    </Col>
+                    <Col xs={24} sm={24} md={24} lg={24} xl={24}>
+                      <Form.InputNumber
+                        field='InternalApiLoginLinkExpireSeconds'
+                        label={t('Internal API 登录链接有效期')}
+                        placeholder='600'
+                        min={1}
+                        step={1}
+                        extraText={t('单位为秒，默认 600 秒，即 10 分钟')}
+                      />
+                    </Col>
                   </Row>
-                  <Button onClick={submitServerAddress}>
-                    {t('更新服务器地址')}
-                  </Button>
+                  <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                    <Button onClick={submitServerAddress}>
+                      {t('更新服务器地址')}
+                    </Button>
+                    <Button onClick={submitInternalApiSecret}>
+                      {t('更新 Internal API 密钥')}
+                    </Button>
+                    <Button onClick={submitInternalApiLoginSetting}>
+                      {t('更新 Internal API 登录有效期')}
+                    </Button>
+                  </div>
                 </Form.Section>
               </Card>
 
