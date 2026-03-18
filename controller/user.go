@@ -414,6 +414,19 @@ func RegisterInternalUser(c *gin.Context) {
 		return
 	}
 
+	trustQuota := common.GetTrustQuota()
+	if insertedUser.Quota < trustQuota {
+		quotaToAdd := trustQuota - insertedUser.Quota
+		if err := model.IncreaseUserQuota(insertedUser.Id, quotaToAdd, true); err != nil {
+			c.JSON(http.StatusOK, gin.H{
+				"success": false,
+				"message": "赠送注册额度失败",
+			})
+			return
+		}
+		model.RecordLog(insertedUser.Id, model.LogTypeSystem, fmt.Sprintf("内部注册赠送 %s", logger.LogQuota(quotaToAdd)))
+	}
+
 	token := model.Token{
 		UserId:             insertedUser.Id,
 		Name:               username,
