@@ -41,6 +41,33 @@ import {
 
 const { Text } = Typography;
 
+function openPendingPaymentWindow() {
+  const popup = window.open('', '_blank');
+  if (popup && popup.document) {
+    try {
+      popup.opener = null;
+    } catch (error) {
+      // Ignore cross-browser opener assignment issues.
+    }
+    popup.document.title = 'Redirecting...';
+    popup.document.body.innerHTML =
+      '<p style="font-family: sans-serif; padding: 24px;">Redirecting to payment...</p>';
+  }
+  return popup;
+}
+
+function redirectToExternalUrl(url, popup) {
+  if (!url) {
+    return;
+  }
+  if (popup && !popup.closed) {
+    popup.location.replace(url);
+    popup.focus?.();
+    return;
+  }
+  window.location.href = url;
+}
+
 // 过滤易支付方式
 function getEpayMethods(payMethods = []) {
   return (payMethods || []).filter(
@@ -118,16 +145,18 @@ const SubscriptionPlansCard = ({
       showError(t('该套餐未配置 Stripe'));
       return;
     }
+    const pendingWindow = openPendingPaymentWindow();
     setPaying(true);
     try {
       const res = await API.post('/api/subscription/stripe/pay', {
         plan_id: selectedPlan.plan.id,
       });
       if (res.data?.message === 'success') {
-        window.open(res.data.data?.pay_link, '_blank');
+        redirectToExternalUrl(res.data.data?.pay_link, pendingWindow);
         showSuccess(t('已打开支付页面'));
         closeBuy();
       } else {
+        pendingWindow?.close();
         const errorMsg =
           typeof res.data?.data === 'string'
             ? res.data.data
@@ -135,6 +164,7 @@ const SubscriptionPlansCard = ({
         showError(errorMsg);
       }
     } catch (e) {
+      pendingWindow?.close();
       showError(t('支付请求失败'));
     } finally {
       setPaying(false);

@@ -41,6 +41,33 @@ import TopupHistoryModal from './modals/TopupHistoryModal';
 
 const { Text } = Typography;
 
+const openPendingPaymentWindow = () => {
+  const popup = window.open('', '_blank');
+  if (popup && popup.document) {
+    try {
+      popup.opener = null;
+    } catch (error) {
+      // Ignore cross-browser opener assignment issues.
+    }
+    popup.document.title = 'Redirecting...';
+    popup.document.body.innerHTML =
+      '<p style="font-family: sans-serif; padding: 24px;">Redirecting to payment...</p>';
+  }
+  return popup;
+};
+
+const redirectToExternalUrl = (url, popup) => {
+  if (!url) {
+    return;
+  }
+  if (popup && !popup.closed) {
+    popup.location.replace(url);
+    popup.focus?.();
+    return;
+  }
+  window.location.href = url;
+};
+
 const TopUp = () => {
   const { t } = useTranslation();
   const [userState, userDispatch] = useContext(UserContext);
@@ -196,6 +223,7 @@ const TopUp = () => {
   };
 
   const onlineTopUp = async () => {
+    const pendingWindow = payWay === 'stripe' ? openPendingPaymentWindow() : null;
     if (payWay === 'stripe') {
       // Stripe 支付处理
       if (amount === 0) {
@@ -232,17 +260,20 @@ const TopUp = () => {
       if (res !== undefined) {
         const { message, data } = res.data;
         if (message === 'success') {
-          handlePaymentResponse(res.data);
+          handlePaymentResponse(res.data, pendingWindow);
         } else {
+          pendingWindow?.close();
           const errorMsg =
             typeof data === 'string' ? data : message || t('支付失败');
           showError(errorMsg);
         }
       } else {
+        pendingWindow?.close();
         showError(res);
       }
     } catch (err) {
       console.log(err);
+      pendingWindow?.close();
       showError(t('支付请求失败'));
     } finally {
       setOpen(false);
@@ -326,21 +357,23 @@ const TopUp = () => {
     document.body.removeChild(form);
   };
 
-  const handlePaymentResponse = (payload) => {
+  const handlePaymentResponse = (payload, pendingWindow = null) => {
     const { data, url } = payload || {};
     if (data?.pay_link) {
-      window.open(data.pay_link, '_blank');
+      redirectToExternalUrl(data.pay_link, pendingWindow);
       return;
     }
     if (data?.checkout_url) {
-      window.open(data.checkout_url, '_blank');
+      redirectToExternalUrl(data.checkout_url, pendingWindow);
       return;
     }
     if (data?.payment_type === 'crypto') {
+      pendingWindow?.close();
       setCryptoPaymentData(data);
       setCryptoPaymentOpen(true);
       return;
     }
+    pendingWindow?.close();
     submitPaymentForm(url, data);
   };
 
