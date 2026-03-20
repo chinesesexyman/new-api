@@ -243,6 +243,7 @@ const renderNameRule = (rule, record, t) => {
     1: { color: 'blue', label: t('前缀') },
     2: { color: 'orange', label: t('包含') },
     3: { color: 'purple', label: t('后缀') },
+    4: { color: 'cyan', label: t('正则') },
   };
   const cfg = map[rule];
   if (!cfg) return '-';

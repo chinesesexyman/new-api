@@ -1,7 +1,10 @@
 package model
 
 import (
+	"fmt"
+	"regexp"
 	"strconv"
+	"strings"
 
 	"github.com/QuantumNous/new-api/common"
 
@@ -13,6 +16,7 @@ const (
 	NameRulePrefix
 	NameRuleContains
 	NameRuleSuffix
+	NameRuleRegex
 )
 
 type BoundChannel struct {
@@ -28,6 +32,7 @@ type Model struct {
 	Tags         string         `json:"tags,omitempty" gorm:"type:varchar(255)"`
 	VendorID     int            `json:"vendor_id,omitempty" gorm:"index"`
 	Endpoints    string         `json:"endpoints,omitempty" gorm:"type:text"`
+	Extra        string         `json:"extra,omitempty" gorm:"type:text"`
 	Status       int            `json:"status" gorm:"default:1"`
 	SyncOfficial int            `json:"sync_official" gorm:"default:1"`
 	CreatedTime  int64          `json:"created_time" gorm:"bigint"`
@@ -41,6 +46,50 @@ type Model struct {
 
 	MatchedModels []string `json:"matched_models,omitempty" gorm:"-"`
 	MatchedCount  int      `json:"matched_count,omitempty" gorm:"-"`
+}
+
+func IsValidModelNameRule(rule int) bool {
+	switch rule {
+	case NameRuleExact, NameRulePrefix, NameRuleContains, NameRuleSuffix, NameRuleRegex:
+		return true
+	default:
+		return false
+	}
+}
+
+func ValidateModelNameRulePattern(rule int, pattern string) error {
+	if !IsValidModelNameRule(rule) {
+		return fmt.Errorf("invalid name rule: %d", rule)
+	}
+	if rule != NameRuleRegex {
+		return nil
+	}
+	if strings.TrimSpace(pattern) == "" {
+		return fmt.Errorf("regex pattern cannot be empty")
+	}
+	_, err := regexp.Compile(pattern)
+	return err
+}
+
+func MatchModelNameRule(rule int, pattern string, modelName string) bool {
+	switch rule {
+	case NameRuleExact:
+		return modelName == pattern
+	case NameRulePrefix:
+		return strings.HasPrefix(modelName, pattern)
+	case NameRuleSuffix:
+		return strings.HasSuffix(modelName, pattern)
+	case NameRuleContains:
+		return strings.Contains(modelName, pattern)
+	case NameRuleRegex:
+		re, err := regexp.Compile(pattern)
+		if err != nil {
+			return false
+		}
+		return re.MatchString(modelName)
+	default:
+		return false
+	}
 }
 
 func (mi *Model) Insert() error {
@@ -77,7 +126,7 @@ func (mi *Model) Update() error {
 	mi.UpdatedTime = common.GetTimestamp()
 	// 使用 Select 强制更新所有字段，包括零值
 	return DB.Model(&Model{}).Where("id = ?", mi.Id).
-		Select("model_name", "description", "icon", "tags", "vendor_id", "endpoints", "status", "sync_official", "name_rule", "updated_time").
+		Select("model_name", "description", "icon", "tags", "vendor_id", "endpoints", "extra", "status", "sync_official", "name_rule", "updated_time").
 		Updates(mi).Error
 }
 

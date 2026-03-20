@@ -57,7 +57,10 @@ const nameRuleOptions = [
   { label: '前缀名称匹配', value: 1 },
   { label: '包含名称匹配', value: 2 },
   { label: '后缀名称匹配', value: 3 },
+  { label: '正则表达式匹配', value: 4 },
 ];
+
+const REGEX_NAME_RULE = 4;
 
 const EditModelModal = (props) => {
   const { t } = useTranslation();
@@ -121,6 +124,7 @@ const EditModelModal = (props) => {
     vendor: '',
     vendor_icon: '',
     endpoints: '',
+    extra: '',
     name_rule: props.editingModel?.model_name ? 0 : undefined, // 通过未配置模型过来的固定为精确匹配
     status: true,
     sync_official: true,
@@ -147,6 +151,10 @@ const EditModelModal = (props) => {
         // endpoints 保持原始 JSON 字符串，若为空设为空串
         if (!data.endpoints) {
           data.endpoints = '';
+        }
+        // extra 保持原始 JSON 字符串，若为空设为空串
+        if (!data.extra) {
+          data.extra = '';
         }
         // 处理status/sync_official，将数字转为布尔值
         data.status = data.status === 1;
@@ -196,6 +204,7 @@ const EditModelModal = (props) => {
         ...values,
         tags: Array.isArray(values.tags) ? values.tags.join(',') : values.tags,
         endpoints: values.endpoints || '',
+        extra: values.extra || '',
         status: values.status ? 1 : 0,
         sync_official: values.sync_official ? 1 : 0,
       };
@@ -306,7 +315,28 @@ const EditModelModal = (props) => {
                       field='model_name'
                       label={t('模型名称')}
                       placeholder={t('请输入模型名称，如：gpt-4')}
-                      rules={[{ required: true, message: t('请输入模型名称') }]}
+                      rules={[
+                        { required: true, message: t('请输入模型名称') },
+                        {
+                          validator: (_, value, values) => {
+                            if (values?.name_rule !== REGEX_NAME_RULE) {
+                              return true;
+                            }
+                            if (!value || !String(value).trim()) {
+                              return true;
+                            }
+                            try {
+                              new RegExp(value);
+                              return true;
+                            } catch {
+                              return false;
+                            }
+                          },
+                          message: t('正则表达式不合法'),
+                        },
+                      ]}
+                      trigger='change'
+                      stopValidateWithError
                       showClear
                     />
                   </Col>
@@ -324,7 +354,7 @@ const EditModelModal = (props) => {
                         { required: true, message: t('请选择名称匹配类型') },
                       ]}
                       extraText={t(
-                        '根据模型名称和匹配规则查找模型元数据，优先级：精确 > 前缀 > 后缀 > 包含',
+                        '根据模型名称和匹配规则查找模型元数据，优先级：精确 > 正则 > 前缀 > 后缀 > 包含',
                       )}
                       style={{ width: '100%' }}
                     />
@@ -522,6 +552,24 @@ const EditModelModal = (props) => {
                           </Space>
                         )
                       }
+                    />
+                  </Col>
+                  <Col span={24}>
+                    <JSONEditor
+                      field='extra'
+                      label={t('扩展配置（JSON）')}
+                      placeholder={
+                        '{\n  "inputTokenLimit": 1048576,\n  "outputTokenLimit": 8192\n}'
+                      }
+                      value={values.extra}
+                      onChange={(val) =>
+                        formApiRef.current?.setValue('extra', val)
+                      }
+                      formApi={formApiRef.current}
+                      editorType='object'
+                      extraText={t(
+                        '可选的模型扩展配置，将原样保存到 models.extra，并在 /api/pricing 中以 extra 返回',
+                      )}
                     />
                   </Col>
                   <Col span={24}>

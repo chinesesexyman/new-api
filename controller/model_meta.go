@@ -13,6 +13,21 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+func validateModelExtra(raw string) error {
+	if strings.TrimSpace(raw) == "" {
+		return nil
+	}
+	var parsed interface{}
+	return common.Unmarshal([]byte(raw), &parsed)
+}
+
+func validateModelMetaInput(m *model.Model) error {
+	if err := validateModelExtra(m.Extra); err != nil {
+		return err
+	}
+	return model.ValidateModelNameRulePattern(m.NameRule, m.ModelName)
+}
+
 // GetAllModelsMeta 获取模型列表（分页）
 func GetAllModelsMeta(c *gin.Context) {
 
@@ -88,6 +103,14 @@ func CreateModelMeta(c *gin.Context) {
 		common.ApiErrorMsg(c, "模型名称不能为空")
 		return
 	}
+	if err := validateModelMetaInput(&m); err != nil {
+		if strings.Contains(err.Error(), "name rule") || strings.Contains(err.Error(), "regex") {
+			common.ApiErrorMsg(c, "名称匹配规则不合法")
+			return
+		}
+		common.ApiErrorMsg(c, "extra 不是合法的 JSON 字符串")
+		return
+	}
 	// 名称冲突检查
 	if dup, err := model.IsModelNameDuplicated(0, m.ModelName); err != nil {
 		common.ApiError(c, err)
@@ -117,6 +140,16 @@ func UpdateModelMeta(c *gin.Context) {
 	if m.Id == 0 {
 		common.ApiErrorMsg(c, "缺少模型 ID")
 		return
+	}
+	if !statusOnly {
+		if err := validateModelMetaInput(&m); err != nil {
+			if strings.Contains(err.Error(), "name rule") || strings.Contains(err.Error(), "regex") {
+				common.ApiErrorMsg(c, "名称匹配规则不合法")
+				return
+			}
+			common.ApiErrorMsg(c, "extra 不是合法的 JSON 字符串")
+			return
+		}
 	}
 
 	if statusOnly {
@@ -218,16 +251,7 @@ func enrichModels(models []*model.Model) {
 	for _, p := range pricings {
 		for _, idx := range ruleIndices {
 			mm := models[idx]
-			var matched bool
-			switch mm.NameRule {
-			case model.NameRulePrefix:
-				matched = strings.HasPrefix(p.ModelName, mm.ModelName)
-			case model.NameRuleSuffix:
-				matched = strings.HasSuffix(p.ModelName, mm.ModelName)
-			case model.NameRuleContains:
-				matched = strings.Contains(p.ModelName, mm.ModelName)
-			}
-			if !matched {
+			if !model.MatchModelNameRule(mm.NameRule, mm.ModelName, p.ModelName) {
 				continue
 			}
 			matchedNamesByIdx[idx] = append(matchedNamesByIdx[idx], p.ModelName)

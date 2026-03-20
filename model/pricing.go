@@ -19,6 +19,7 @@ type Pricing struct {
 	Description            string                  `json:"description,omitempty"`
 	Icon                   string                  `json:"icon,omitempty"`
 	Tags                   string                  `json:"tags,omitempty"`
+	Extra                  interface{}             `json:"extra,omitempty"`
 	VendorID               int                     `json:"vendor_id,omitempty"`
 	QuotaType              int                     `json:"quota_type"`
 	ModelRatio             float64                 `json:"model_ratio"`
@@ -101,6 +102,7 @@ func updatePricing() {
 	var allMeta []Model
 	_ = DB.Find(&allMeta).Error
 	metaMap := make(map[string]*Model)
+	regexList := make([]*Model, 0)
 	prefixList := make([]*Model, 0)
 	suffixList := make([]*Model, 0)
 	containsList := make([]*Model, 0)
@@ -110,6 +112,8 @@ func updatePricing() {
 			metaMap[m.ModelName] = m
 		} else {
 			switch m.NameRule {
+			case NameRuleRegex:
+				regexList = append(regexList, m)
 			case NameRulePrefix:
 				prefixList = append(prefixList, m)
 			case NameRuleSuffix:
@@ -121,9 +125,18 @@ func updatePricing() {
 	}
 
 	// 将非精确规则模型匹配到 metaMap
+	for _, m := range regexList {
+		for _, pricingModel := range enableAbilities {
+			if MatchModelNameRule(NameRuleRegex, m.ModelName, pricingModel.Model) {
+				if _, exists := metaMap[pricingModel.Model]; !exists {
+					metaMap[pricingModel.Model] = m
+				}
+			}
+		}
+	}
 	for _, m := range prefixList {
 		for _, pricingModel := range enableAbilities {
-			if strings.HasPrefix(pricingModel.Model, m.ModelName) {
+			if MatchModelNameRule(NameRulePrefix, m.ModelName, pricingModel.Model) {
 				if _, exists := metaMap[pricingModel.Model]; !exists {
 					metaMap[pricingModel.Model] = m
 				}
@@ -132,7 +145,7 @@ func updatePricing() {
 	}
 	for _, m := range suffixList {
 		for _, pricingModel := range enableAbilities {
-			if strings.HasSuffix(pricingModel.Model, m.ModelName) {
+			if MatchModelNameRule(NameRuleSuffix, m.ModelName, pricingModel.Model) {
 				if _, exists := metaMap[pricingModel.Model]; !exists {
 					metaMap[pricingModel.Model] = m
 				}
@@ -141,7 +154,7 @@ func updatePricing() {
 	}
 	for _, m := range containsList {
 		for _, pricingModel := range enableAbilities {
-			if strings.Contains(pricingModel.Model, m.ModelName) {
+			if MatchModelNameRule(NameRuleContains, m.ModelName, pricingModel.Model) {
 				if _, exists := metaMap[pricingModel.Model]; !exists {
 					metaMap[pricingModel.Model] = m
 				}
@@ -286,6 +299,14 @@ func updatePricing() {
 			pricing.Icon = meta.Icon
 			pricing.Tags = meta.Tags
 			pricing.VendorID = meta.VendorID
+			if strings.TrimSpace(meta.Extra) != "" {
+				var extra interface{}
+				if err := common.Unmarshal([]byte(meta.Extra), &extra); err != nil {
+					common.SysError(fmt.Sprintf("invalid model extra json ignored: model=%s, err=%v", model, err))
+				} else {
+					pricing.Extra = extra
+				}
+			}
 		}
 		modelPrice, findPrice := ratio_setting.GetModelPrice(model, false)
 		if findPrice {
