@@ -63,14 +63,6 @@ const ModelAccess = () => {
     <div className='mt-[60px] px-4 py-6 md:px-8 lg:px-12'>
       <div className='mx-auto max-w-5xl'>
         <Card className='overflow-hidden'>
-          <div className='mb-6 border-b border-semi-color-border pb-5'>
-            <Title heading={2} style={{ marginBottom: 8 }}>
-              模型接入文档
-            </Title>
-            <Text type='secondary'>
-              文档内容读取自 `web/public/docs/model-access.md`，修改该文件后刷新页面即可生效。
-            </Text>
-          </div>
           {loaded && content ? (
             <MarkdownRenderer content={content} />
           ) : loaded ? (
