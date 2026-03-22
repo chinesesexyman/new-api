@@ -321,14 +321,9 @@ func requestCryptoPay(c *gin.Context, req *EpayRequest, payMoney float64, group 
 		return
 	}
 
-	instruction := strings.TrimSpace(operation_setting.GetPaymentSetting().CryptoPaymentInstruction)
-	if instruction == "" {
-		instruction = "链上支付创建后，请按订单信息转账，系统将在监听到到账并确认后自动入账。"
-	}
-
 	c.JSON(200, gin.H{
 		"message": "success",
-		"data":    buildCryptoPaymentResponse(cryptoMethod, selectedWallet.Label, tradeNo, selectedWallet.Address, cryptoAmount, baseCryptoAmount, uniqueSuffix, expireAt, payMoney, instruction),
+		"data":    buildCryptoPaymentResponse(cryptoMethod, selectedWallet.Label, tradeNo, selectedWallet.Address, cryptoAmount, baseCryptoAmount, uniqueSuffix, expireAt, payMoney),
 	})
 }
 
@@ -364,11 +359,6 @@ func resumeCryptoTopUp(c *gin.Context, topUp *model.TopUp) {
 		}
 	}
 
-	instruction := strings.TrimSpace(operation_setting.GetPaymentSetting().CryptoPaymentInstruction)
-	if instruction == "" {
-		instruction = "链上支付创建后，请按订单信息转账，系统将在监听到到账并确认后自动入账。"
-	}
-
 	c.JSON(200, gin.H{
 		"message": "success",
 		"data": buildCryptoPaymentResponse(
@@ -381,12 +371,11 @@ func resumeCryptoTopUp(c *gin.Context, topUp *model.TopUp) {
 			payload.UniqueSuffix,
 			payload.ExpireAt,
 			topUp.Money,
-			instruction,
 		),
 	})
 }
 
-func buildCryptoPaymentResponse(method *CryptoPaymentMethod, addressLabel string, tradeNo string, address string, amount float64, baseAmount float64, uniqueSuffix float64, expireAt int64, payMoney float64, instruction string) gin.H {
+func buildCryptoPaymentResponse(method *CryptoPaymentMethod, addressLabel string, tradeNo string, address string, amount float64, baseAmount float64, uniqueSuffix float64, expireAt int64, payMoney float64) gin.H {
 	return gin.H{
 		"payment_type":  "crypto",
 		"trade_no":      tradeNo,
@@ -399,7 +388,6 @@ func buildCryptoPaymentResponse(method *CryptoPaymentMethod, addressLabel string
 		"unique_suffix": uniqueSuffix,
 		"expire_at":     expireAt,
 		"amount_fiat":   payMoney,
-		"instruction":   instruction,
 	}
 }
 

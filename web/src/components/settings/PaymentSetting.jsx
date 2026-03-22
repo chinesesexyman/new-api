@@ -48,7 +48,6 @@ const PaymentSetting = () => {
     CryptoMonitorConfirmations: 12,
     CryptoWallets: '',
     CryptoTokenConfigs: '',
-    CryptoPaymentInstruction: '',
 
     StripeApiSecret: '',
     StripeWebhookSecret: '',
@@ -142,9 +141,6 @@ const PaymentSetting = () => {
             } catch (error) {
               newInputs['CryptoTokenConfigs'] = item.value;
             }
-            break;
-          case 'payment_setting.crypto_payment_instruction':
-            newInputs['CryptoPaymentInstruction'] = item.value;
             break;
           case 'Price':
           case 'MinTopUp':

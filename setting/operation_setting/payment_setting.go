@@ -39,7 +39,6 @@ type PaymentSetting struct {
 	CryptoMonitorConfirmations int                  `json:"crypto_monitor_confirmations"`
 	CryptoWallets              []CryptoWalletConfig `json:"crypto_wallets"`
 	CryptoTokenConfigs         []CryptoTokenConfig  `json:"crypto_token_configs"`
-	CryptoPaymentInstruction   string               `json:"crypto_payment_instruction"`
 }
 
 // 默认配置
@@ -51,7 +50,6 @@ var paymentSetting = PaymentSetting{
 	CryptoMonitorLookback:      5000,
 	CryptoMonitorConfirmations: 12,
 	CryptoTokenConfigs:         defaultCryptoTokenConfigs(),
-	CryptoPaymentInstruction:   "链上支付创建后，请按订单信息转账，系统将在监听到到账并确认后自动入账。",
 }
 
 func init() {

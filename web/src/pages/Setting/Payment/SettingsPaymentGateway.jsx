@@ -74,7 +74,6 @@ export default function SettingsPaymentGateway(props) {
     CryptoMonitorConfirmations: 12,
     CryptoWallets: '',
     CryptoTokenConfigs: '',
-    CryptoPaymentInstruction: '',
   });
   const [cryptoWalletRows, setCryptoWalletRows] = useState([]);
   const [cryptoTokenRows, setCryptoTokenRows] = useState([]);
@@ -226,7 +225,6 @@ export default function SettingsPaymentGateway(props) {
             : 12,
         CryptoWallets: props.options.CryptoWallets || '',
         CryptoTokenConfigs: props.options.CryptoTokenConfigs || '',
-        CryptoPaymentInstruction: props.options.CryptoPaymentInstruction || '',
       };
 
       // 美化 JSON 展示
@@ -502,16 +500,6 @@ export default function SettingsPaymentGateway(props) {
         key: 'payment_setting.crypto_token_configs',
         value: cryptoTokenConfigsValue,
       });
-      if (
-        originInputs['CryptoPaymentInstruction'] !==
-        inputs.CryptoPaymentInstruction
-      ) {
-        options.push({
-          key: 'payment_setting.crypto_payment_instruction',
-          value: inputs.CryptoPaymentInstruction,
-        });
-      }
-
       // 发送请求
       const requestQueue = options.map((opt) =>
         API.put('/api/option/', {
@@ -826,25 +814,6 @@ export default function SettingsPaymentGateway(props) {
               )}
             </div>
           </div>
-          <Row
-            gutter={{ xs: 8, sm: 16, md: 24, lg: 24, xl: 24, xxl: 24 }}
-            style={{ marginTop: 16 }}
-          >
-            <Col span={24}>
-              <Form.TextArea
-                field='CryptoPaymentInstruction'
-                label={t('数字货币支付说明')}
-                placeholder={t(
-                  '例如：请严格按订单金额转账，系统将在监听到到账并确认后自动入账。',
-                )}
-                autosize
-                extraText={t(
-                  'ETH 和 Solana 都填写主收款地址；同链 USDT/USDC 共用同一个地址，Solana 会自动根据 mint 查找对应代币账户。',
-                )}
-              />
-            </Col>
-          </Row>
-
           <Row
             gutter={{ xs: 8, sm: 16, md: 24, lg: 24, xl: 24, xxl: 24 }}
             style={{ marginTop: 16 }}
