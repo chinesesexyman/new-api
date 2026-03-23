@@ -35,6 +35,8 @@ type StripePayRequest struct {
 	Amount int64 `json:"amount"`
 	// PaymentMethod specifies the payment method (e.g., "stripe").
 	PaymentMethod string `json:"payment_method"`
+	// ReturnURL is the optional page to redirect back to after checkout finishes.
+	ReturnURL string `json:"return_url,omitempty"`
 	// SuccessURL is the optional custom URL to redirect after successful payment.
 	// If empty, defaults to the server's console log page.
 	SuccessURL string `json:"success_url,omitempty"`
@@ -84,6 +86,11 @@ func (*StripeAdaptor) RequestPay(c *gin.Context, req *StripePayRequest) {
 		return
 	}
 
+	if req.ReturnURL != "" && common.ValidateRedirectURL(req.ReturnURL) != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "支付回跳URL不在可信任域名列表中", "data": ""})
+		return
+	}
+
 	if req.CancelURL != "" && common.ValidateRedirectURL(req.CancelURL) != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "支付取消重定向URL不在可信任域名列表中", "data": ""})
 		return
@@ -95,8 +102,9 @@ func (*StripeAdaptor) RequestPay(c *gin.Context, req *StripePayRequest) {
 
 	reference := fmt.Sprintf("new-api-ref-%d-%d-%s", user.Id, time.Now().UnixMilli(), randstr.String(4))
 	referenceId := "ref_" + common.Sha1([]byte(reference))
+	successURL, cancelURL := buildStripeRedirectURLs(referenceId, req.ReturnURL, req.SuccessURL, req.CancelURL)
 
-	payLink, err := genStripeLink(referenceId, user.StripeCustomer, user.Email, req.Amount, req.SuccessURL, req.CancelURL)
+	payLink, err := genStripeLink(referenceId, user.StripeCustomer, user.Email, req.Amount, successURL, cancelURL)
 	if err != nil {
 		log.Println("获取Stripe Checkout支付链接失败", err)
 		c.JSON(200, gin.H{"message": "error", "data": "拉起支付失败"})
@@ -109,8 +117,11 @@ func (*StripeAdaptor) RequestPay(c *gin.Context, req *StripePayRequest) {
 		Money:         chargedMoney,
 		TradeNo:       referenceId,
 		PaymentMethod: PaymentMethodStripe,
-		CreateTime:    time.Now().Unix(),
-		Status:        common.TopUpStatusPending,
+		ProviderPayload: common.GetJsonString(TopUpRedirectContext{
+			ReturnURL: strings.TrimSpace(req.ReturnURL),
+		}),
+		CreateTime: time.Now().Unix(),
+		Status:     common.TopUpStatusPending,
 	}
 	err = topUp.Insert()
 	if err != nil {
@@ -121,6 +132,7 @@ func (*StripeAdaptor) RequestPay(c *gin.Context, req *StripePayRequest) {
 		"message": "success",
 		"data": gin.H{
 			"pay_link": payLink,
+			"trade_no": referenceId,
 		},
 	})
 }
@@ -313,6 +325,19 @@ func genStripeLink(referenceId string, customerId string, email string, amount i
 	}
 
 	return result.URL, nil
+}
+
+func buildStripeRedirectURLs(tradeNo string, returnURL string, successURL string, cancelURL string) (string, string) {
+	returnURL = strings.TrimSpace(returnURL)
+	if returnURL != "" {
+		if successURL == "" {
+			successURL = buildExternalReturnURL(returnURL, tradeNo, "success")
+		}
+		if cancelURL == "" {
+			cancelURL = buildExternalReturnURL(returnURL, tradeNo, "cancel")
+		}
+	}
+	return successURL, cancelURL
 }
 
 func GetChargedAmount(count float64, user model.User) float64 {

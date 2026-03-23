@@ -2,6 +2,7 @@ package common
 
 import (
 	"fmt"
+	"net"
 	"net/url"
 	"strings"
 
@@ -12,7 +13,7 @@ import (
 // It checks that:
 //   - The URL is properly formatted
 //   - The scheme is either http or https
-//   - The domain is in the trusted domains list (exact match or subdomain)
+//   - The hostname is localhost, a loopback/private IP, or in the trusted domains list
 //
 // Returns nil if the URL is valid and trusted, otherwise returns an error
 // describing why the validation failed.
@@ -28,6 +29,9 @@ func ValidateRedirectURL(rawURL string) error {
 	}
 
 	domain := strings.ToLower(parsedURL.Hostname())
+	if isLocalRedirectHost(domain) {
+		return nil
+	}
 
 	for _, trustedDomain := range constant.TrustedRedirectDomains {
 		if domain == trustedDomain || strings.HasSuffix(domain, "."+trustedDomain) {
@@ -36,4 +40,20 @@ func ValidateRedirectURL(rawURL string) error {
 	}
 
 	return fmt.Errorf("domain %s is not in the trusted domains list", domain)
+}
+
+func isLocalRedirectHost(host string) bool {
+	if host == "" {
+		return false
+	}
+	if host == "localhost" {
+		return true
+	}
+
+	ip := net.ParseIP(host)
+	if ip == nil {
+		return false
+	}
+
+	return ip.IsLoopback() || ip.IsPrivate()
 }

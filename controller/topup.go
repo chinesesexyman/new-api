@@ -73,6 +73,7 @@ func GetTopUpInfo(c *gin.Context) {
 type EpayRequest struct {
 	Amount        int64  `json:"amount"`
 	PaymentMethod string `json:"payment_method"`
+	ReturnURL     string `json:"return_url,omitempty"`
 }
 
 type AmountRequest struct {
@@ -86,11 +87,16 @@ type InternalAmountEncryptedRequest struct {
 
 type InternalActivationRequest struct {
 	ActivationToken string `json:"activation_token"`
+	ReturnURL       string `json:"return_url,omitempty"`
 	Timestamp       string `json:"timestamp"`
 }
 
 type ResumeTopUpRequest struct {
 	TradeNo string `json:"trade_no"`
+}
+
+type TopUpRedirectContext struct {
+	ReturnURL string `json:"return_url,omitempty"`
 }
 
 func GetEpayClient() *epay.Client {
@@ -107,9 +113,13 @@ func GetEpayClient() *epay.Client {
 	return withUrl
 }
 
-func buildEpayPurchase(tradeNo string, paymentMethod string, amount int64, payMoney float64) (string, map[string]string, error) {
+func buildEpayPurchase(tradeNo string, paymentMethod string, amount int64, payMoney float64, returnURL string) (string, map[string]string, error) {
 	callBackAddress := service.GetCallbackAddress()
-	returnUrl, _ := url.Parse(system_setting.ServerAddress + "/console/log")
+	returnTarget := system_setting.ServerAddress + "/console/log"
+	if builtURL := buildExternalReturnURL(returnURL, tradeNo, "pending"); builtURL != "" {
+		returnTarget = builtURL
+	}
+	returnUrl, _ := url.Parse(returnTarget)
 	notifyUrl, _ := url.Parse(callBackAddress + "/api/user/epay/notify")
 	client := GetEpayClient()
 	if client == nil {
@@ -177,6 +187,10 @@ func RequestEpay(c *gin.Context) {
 		c.JSON(200, gin.H{"message": "error", "data": "参数错误"})
 		return
 	}
+	if req.ReturnURL != "" && common.ValidateRedirectURL(req.ReturnURL) != nil {
+		c.JSON(200, gin.H{"message": "error", "data": "支付回跳URL不在可信任域名列表中"})
+		return
+	}
 	if req.Amount < getMinTopup() {
 		c.JSON(200, gin.H{"message": "error", "data": fmt.Sprintf("充值数量不能小于 %d", getMinTopup())})
 		return
@@ -206,7 +220,8 @@ func RequestEpay(c *gin.Context) {
 
 	tradeNo := fmt.Sprintf("%s%d", common.GetRandomString(6), time.Now().Unix())
 	tradeNo = fmt.Sprintf("USR%dNO%s", id, tradeNo)
-	uri, params, err := buildEpayPurchase(tradeNo, req.PaymentMethod, req.Amount, payMoney)
+	redirectContext := TopUpRedirectContext{ReturnURL: strings.TrimSpace(req.ReturnURL)}
+	uri, params, err := buildEpayPurchase(tradeNo, req.PaymentMethod, req.Amount, payMoney, redirectContext.ReturnURL)
 	if err != nil {
 		c.JSON(200, gin.H{"message": "error", "data": "拉起支付失败"})
 		return
@@ -218,13 +233,14 @@ func RequestEpay(c *gin.Context) {
 		amount = dAmount.Div(dQuotaPerUnit).IntPart()
 	}
 	topUp := &model.TopUp{
-		UserId:        id,
-		Amount:        amount,
-		Money:         payMoney,
-		TradeNo:       tradeNo,
-		PaymentMethod: req.PaymentMethod,
-		CreateTime:    time.Now().Unix(),
-		Status:        "pending",
+		UserId:          id,
+		Amount:          amount,
+		Money:           payMoney,
+		TradeNo:         tradeNo,
+		PaymentMethod:   req.PaymentMethod,
+		ProviderPayload: common.GetJsonString(redirectContext),
+		CreateTime:      time.Now().Unix(),
+		Status:          "pending",
 	}
 	err = topUp.Insert()
 	if err != nil {
@@ -264,7 +280,9 @@ func ResumeTopUp(c *gin.Context) {
 			c.JSON(200, gin.H{"message": "error", "data": "用户不存在"})
 			return
 		}
-		payLink, err := genStripeLink(topUp.TradeNo, user.StripeCustomer, user.Email, topUp.Amount, "", "")
+		redirectContext := parseTopUpRedirectContext(topUp.ProviderPayload)
+		successURL, cancelURL := buildStripeRedirectURLs(topUp.TradeNo, redirectContext.ReturnURL, "", "")
+		payLink, err := genStripeLink(topUp.TradeNo, user.StripeCustomer, user.Email, topUp.Amount, successURL, cancelURL)
 		if err != nil {
 			c.JSON(200, gin.H{"message": "error", "data": "拉起支付失败"})
 			return
@@ -289,7 +307,8 @@ func ResumeTopUp(c *gin.Context) {
 			c.JSON(200, gin.H{"message": "error", "data": "支付方式不存在"})
 			return
 		}
-		uri, params, err := buildEpayPurchase(topUp.TradeNo, topUp.PaymentMethod, topUp.Amount, topUp.Money)
+		redirectContext := parseTopUpRedirectContext(topUp.ProviderPayload)
+		uri, params, err := buildEpayPurchase(topUp.TradeNo, topUp.PaymentMethod, topUp.Amount, topUp.Money, redirectContext.ReturnURL)
 		if err != nil {
 			c.JSON(200, gin.H{"message": "error", "data": "拉起支付失败"})
 			return
@@ -479,7 +498,7 @@ func RequestInternalUserAmount(c *gin.Context) {
 		return
 	}
 
-	loginURL, err := buildAccessTokenLoginURL(accessToken)
+	loginURL, err := buildAccessTokenLoginURL(accessToken, req.ReturnURL)
 	if err != nil {
 		c.JSON(200, gin.H{"message": "error", "data": "生成授权链接失败"})
 		return
@@ -489,6 +508,39 @@ func RequestInternalUserAmount(c *gin.Context) {
 		Div(decimal.NewFromFloat(common.QuotaPerUnit)).
 		StringFixed(2)
 	c.JSON(200, gin.H{"amount": amount, "url": loginURL, "success": true})
+}
+
+func buildExternalReturnURL(rawReturnURL string, tradeNo string, status string) string {
+	rawReturnURL = strings.TrimSpace(rawReturnURL)
+	if rawReturnURL == "" {
+		return ""
+	}
+
+	parsed, err := url.Parse(rawReturnURL)
+	if err != nil {
+		return ""
+	}
+
+	query := parsed.Query()
+	if tradeNo != "" {
+		query.Set("trade_no", tradeNo)
+	}
+	if status != "" {
+		query.Set("pay_status", status)
+	}
+	parsed.RawQuery = query.Encode()
+	return parsed.String()
+}
+
+func parseTopUpRedirectContext(payload string) TopUpRedirectContext {
+	var context TopUpRedirectContext
+	if strings.TrimSpace(payload) == "" {
+		return context
+	}
+	if err := common.UnmarshalJsonStr(payload, &context); err != nil {
+		return TopUpRedirectContext{}
+	}
+	return context
 }
 
 func decryptInternalPayload(payload string, req any) error {
@@ -629,6 +681,10 @@ type AdminCompleteTopupRequest struct {
 	TradeNo string `json:"trade_no"`
 }
 
+type TopUpStatusRequest struct {
+	TradeNo string `form:"trade_no" json:"trade_no"`
+}
+
 // AdminCompleteTopUp 管理员补单接口
 func AdminCompleteTopUp(c *gin.Context) {
 	var req AdminCompleteTopupRequest
@@ -646,4 +702,29 @@ func AdminCompleteTopUp(c *gin.Context) {
 		return
 	}
 	common.ApiSuccess(c, nil)
+}
+
+func GetTopUpStatus(c *gin.Context) {
+	var req TopUpStatusRequest
+	if err := c.ShouldBindQuery(&req); err != nil || strings.TrimSpace(req.TradeNo) == "" {
+		common.ApiErrorMsg(c, "参数错误")
+		return
+	}
+
+	userId := c.GetInt("id")
+	topUp := model.GetTopUpByTradeNo(strings.TrimSpace(req.TradeNo))
+	if topUp == nil || topUp.UserId != userId {
+		common.ApiErrorMsg(c, "订单不存在")
+		return
+	}
+
+	common.ApiSuccess(c, gin.H{
+		"trade_no":       topUp.TradeNo,
+		"status":         topUp.Status,
+		"payment_method": topUp.PaymentMethod,
+		"amount":         topUp.Amount,
+		"money":          topUp.Money,
+		"create_time":    topUp.CreateTime,
+		"complete_time":  topUp.CompleteTime,
+	})
 }

@@ -18,6 +18,7 @@ For commercial licensing, please contact support@quantumnous.com
 */
 
 import React, { useEffect, useState, useContext, useRef } from 'react';
+import { useLocation } from 'react-router-dom';
 import {
   API,
   showError,
@@ -40,6 +41,29 @@ import PaymentConfirmModal from './modals/PaymentConfirmModal';
 import TopupHistoryModal from './modals/TopupHistoryModal';
 
 const { Text } = Typography;
+const TOPUP_RETURN_URL_STORAGE_KEY = 'new_api_topup_return_url';
+
+const persistTopUpReturnUrl = (value) => {
+  try {
+    if (!value) {
+      window.sessionStorage.removeItem(TOPUP_RETURN_URL_STORAGE_KEY);
+      return;
+    }
+    window.sessionStorage.setItem(TOPUP_RETURN_URL_STORAGE_KEY, value);
+  } catch (error) {
+    // Ignore storage failures.
+  }
+};
+
+const readTopUpReturnUrl = () => {
+  try {
+    return (
+      window.sessionStorage.getItem(TOPUP_RETURN_URL_STORAGE_KEY)?.trim() || ''
+    );
+  } catch (error) {
+    return '';
+  }
+};
 
 const openPendingPaymentWindow = () => {
   const popup = window.open('', '_blank');
@@ -70,6 +94,7 @@ const redirectToExternalUrl = (url, popup) => {
 
 const TopUp = () => {
   const { t } = useTranslation();
+  const location = useLocation();
   const [userState, userDispatch] = useContext(UserContext);
   const [statusState] = useContext(StatusContext);
 
@@ -105,6 +130,7 @@ const TopUp = () => {
   const [paymentLoading, setPaymentLoading] = useState(false);
   const [confirmLoading, setConfirmLoading] = useState(false);
   const [payMethods, setPayMethods] = useState([]);
+  const [returnUrl, setReturnUrl] = useState('');
   const [cryptoPaymentData, setCryptoPaymentData] = useState(null);
   const [cryptoPaymentOpen, setCryptoPaymentOpen] = useState(false);
 
@@ -248,12 +274,14 @@ const TopUp = () => {
         res = await API.post('/api/user/stripe/pay', {
           amount: parseInt(topUpCount),
           payment_method: 'stripe',
+          return_url: returnUrl || undefined,
         });
       } else {
         // 普通支付请求
         res = await API.post('/api/user/pay', {
           amount: parseInt(topUpCount),
           payment_method: payWay,
+          return_url: returnUrl || undefined,
         });
       }
 
@@ -669,6 +697,29 @@ const TopUp = () => {
       </div>
     );
   };
+
+  useEffect(() => {
+    const searchParams = new URLSearchParams(location.search);
+    const nextReturnUrl = (searchParams.get('return_url') || '').trim();
+    if (nextReturnUrl) {
+      setReturnUrl(nextReturnUrl);
+      persistTopUpReturnUrl(nextReturnUrl);
+      return;
+    }
+
+    setReturnUrl('');
+    persistTopUpReturnUrl('');
+  }, [location.search]);
+
+  useEffect(() => {
+    if (returnUrl) {
+      return;
+    }
+    const storedReturnUrl = readTopUpReturnUrl();
+    if (storedReturnUrl) {
+      setReturnUrl(storedReturnUrl);
+    }
+  }, [returnUrl]);
 
   useEffect(() => {
     // 始终获取最新用户数据，确保余额等统计信息准确

@@ -54,6 +54,11 @@ def main() -> int:
         required=True,
         help="InternalApiSecret value; must be exactly 32 bytes in UTF-8",
     )
+    parser.add_argument(
+        "--return-url",
+        default="",
+        help="Optional return_url forwarded to the topup page after internal login",
+    )
     args = parser.parse_args()
 
     secret = args.secret.encode("utf-8")
@@ -62,13 +67,14 @@ def main() -> int:
         return 1
 
     base_url = args.base_url.rstrip("/")
-    encrypted_payload = encrypt(
-        {
-            "activation_token": args.username,
-            "timestamp": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
-        },
-        secret,
-    )
+    payload = {
+        "activation_token": args.username,
+        "timestamp": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+    }
+    if args.return_url:
+        payload["return_url"] = args.return_url
+
+    encrypted_payload = encrypt(payload, secret)
 
     print("Encrypted payload:")
     print(encrypted_payload)

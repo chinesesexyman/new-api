@@ -45,6 +45,30 @@ func TestValidateRedirectURL(t *testing.T) {
 			trustedDomains: []string{"example.com"},
 			wantErr:        false,
 		},
+		{
+			name:           "localhost with port",
+			url:            "http://localhost:3000/callback",
+			trustedDomains: []string{},
+			wantErr:        false,
+		},
+		{
+			name:           "loopback ipv4 with port",
+			url:            "http://127.0.0.1:8080/callback",
+			trustedDomains: []string{},
+			wantErr:        false,
+		},
+		{
+			name:           "private ipv4 with port",
+			url:            "http://192.168.1.10:5173/return",
+			trustedDomains: []string{},
+			wantErr:        false,
+		},
+		{
+			name:           "private ipv6 loopback",
+			url:            "http://[::1]:3000/callback",
+			trustedDomains: []string{},
+			wantErr:        false,
+		},
 
 		// Invalid cases - untrusted domain
 		{
@@ -64,6 +88,13 @@ func TestValidateRedirectURL(t *testing.T) {
 		{
 			name:           "empty trusted domains list",
 			url:            "https://example.com/success",
+			trustedDomains: []string{},
+			wantErr:        true,
+			errContains:    "not in the trusted domains list",
+		},
+		{
+			name:           "public ip is still rejected",
+			url:            "http://8.8.8.8:8080/callback",
 			trustedDomains: []string{},
 			wantErr:        true,
 			errContains:    "not in the trusted domains list",

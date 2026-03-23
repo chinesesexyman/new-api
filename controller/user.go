@@ -33,6 +33,7 @@ type LoginRequest struct {
 
 type InternalAccessLoginTicket struct {
 	AccessToken string `json:"access_token"`
+	ReturnURL   string `json:"return_url,omitempty"`
 	Timestamp   int64  `json:"timestamp"`
 }
 
@@ -140,9 +141,13 @@ func issueUserAccessToken(user *model.User) (string, error) {
 	return user.GetAccessToken(), nil
 }
 
-func buildAccessTokenLoginURL(accessToken string) (string, error) {
+func buildAccessTokenLoginURL(accessToken string, returnURL string) (string, error) {
+	if returnURL != "" && common.ValidateRedirectURL(returnURL) != nil {
+		return "", errors.New("return_url is invalid")
+	}
 	ticket, err := encryptInternalPayload(InternalAccessLoginTicket{
 		AccessToken: accessToken,
+		ReturnURL:   strings.TrimSpace(returnURL),
 		Timestamp:   time.Now().Unix(),
 	})
 	if err != nil {
@@ -232,6 +237,13 @@ func AccessTokenLogin(c *gin.Context) {
 		return
 	}
 
+	redirectTarget := "/console/topup"
+	if returnURL := strings.TrimSpace(loginTicket.ReturnURL); returnURL != "" {
+		if common.ValidateRedirectURL(returnURL) == nil {
+			redirectTarget += "?return_url=" + url.QueryEscape(returnURL)
+		}
+	}
+
 	c.Header("Content-Type", "text/html; charset=utf-8")
 	c.String(http.StatusOK, `<!doctype html>
 <html>
@@ -243,10 +255,10 @@ func AccessTokenLogin(c *gin.Context) {
 <body>
 <script>
   localStorage.setItem('user', %q);
-  window.location.replace('/console/topup');
+  window.location.replace(%q);
 </script>
 </body>
-</html>`, string(userData))
+</html>`, string(userData), redirectTarget)
 }
 
 func Register(c *gin.Context) {
