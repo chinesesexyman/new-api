@@ -24,6 +24,9 @@ import {
   Input,
   ScrollList,
   ScrollItem,
+  Card,
+  Tag,
+  Avatar,
 } from '@douyinfe/semi-ui';
 import {
   API,
@@ -56,6 +59,7 @@ const Home = () => {
   const [homePageContentLoaded, setHomePageContentLoaded] = useState(false);
   const [homePageContent, setHomePageContent] = useState('');
   const [homePageVendors, setHomePageVendors] = useState([]);
+  const [recommendedModels, setRecommendedModels] = useState([]);
   const [noticeVisible, setNoticeVisible] = useState(false);
   const isMobile = useIsMobile();
   const isDemoSiteMode = statusState?.status?.demo_site_enabled || false;
@@ -123,6 +127,58 @@ const Home = () => {
     }
   };
 
+  const loadRecommendedModels = async () => {
+    try {
+      const res = await API.get('/api/pricing/recommended');
+      const { success, data, vendors } = res.data;
+      if (!success || !Array.isArray(data)) {
+        setRecommendedModels([]);
+        return;
+      }
+      const vendorMap = {};
+      if (Array.isArray(vendors)) {
+        vendors.forEach((vendor) => {
+          vendorMap[vendor.id] = vendor;
+        });
+      }
+      const formattedModels = data.slice(0, 6).map((model) => {
+        const vendor = vendorMap[model.vendor_id];
+        return {
+          ...model,
+          vendor_name: vendor?.name || '',
+          vendor_icon: vendor?.icon || '',
+        };
+      });
+      setRecommendedModels(formattedModels);
+    } catch (error) {
+      console.error('获取推荐模型失败:', error);
+      setRecommendedModels([]);
+    }
+  };
+
+  const renderModelIcon = (model) => {
+    if (model?.icon) {
+      return getLobeHubIcon(model.icon, 28);
+    }
+    if (model?.vendor_icon) {
+      return getLobeHubIcon(model.vendor_icon, 28);
+    }
+    return (
+      <Avatar
+        size='small'
+        style={{
+          width: 40,
+          height: 40,
+          borderRadius: 14,
+          fontSize: 14,
+          fontWeight: 700,
+        }}
+      >
+        {model?.model_name?.slice(0, 2)?.toUpperCase() || '?'}
+      </Avatar>
+    );
+  };
+
   const handleCopyBaseURL = async () => {
     const ok = await copy(serverAddress);
     if (ok) {
@@ -153,6 +209,7 @@ const Home = () => {
   useEffect(() => {
     displayHomePageContent().then();
     loadHomePageVendors().then();
+    loadRecommendedModels().then();
   }, []);
 
   useEffect(() => {
@@ -264,6 +321,86 @@ const Home = () => {
                     </Link>
                   )}
                 </div>
+
+                {recommendedModels.length > 0 && (
+                  <div className='mt-10 md:mt-12 w-full max-w-6xl'>
+                    <div className='flex items-center justify-between gap-4 mb-4 px-1'>
+                      <div className='text-left'>
+                        <Text className='text-lg md:text-xl font-semibold text-semi-color-text-0'>
+                          {t('推荐模型')}
+                        </Text>
+                        <div className='text-sm text-semi-color-text-2 mt-1'>
+                          {t('从模型广场中精选的热门能力，适合快速开始')}
+                        </div>
+                      </div>
+                      <Link to='/pricing'>
+                        <Button
+                          theme='borderless'
+                          type='primary'
+                          className='!rounded-full'
+                        >
+                          {t('查看全部')}
+                        </Button>
+                      </Link>
+                    </div>
+                    <div className='grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4'>
+                      {recommendedModels.map((model) => (
+                        <Link
+                          key={model.model_name}
+                          to='/pricing'
+                          className='block'
+                        >
+                          <Card
+                            className='!rounded-3xl border-0 shadow-sm hover:shadow-lg transition-all duration-200 h-full text-left backdrop-blur-sm'
+                            bodyStyle={{ padding: 20, height: '100%' }}
+                          >
+                            <div className='flex flex-col h-full'>
+                              <div className='flex items-start justify-between gap-3 mb-4'>
+                                <div className='flex items-center gap-3 min-w-0'>
+                                  <div className='w-10 h-10 rounded-2xl bg-white/80 dark:bg-black/20 shadow-sm flex items-center justify-center shrink-0'>
+                                    {renderModelIcon(model)}
+                                  </div>
+                                  <div className='min-w-0'>
+                                    <div className='text-base font-semibold text-semi-color-text-0 truncate'>
+                                      {model.model_name}
+                                    </div>
+                                    <div className='text-xs text-semi-color-text-2 truncate'>
+                                      {model.vendor_name || t('精选模型')}
+                                    </div>
+                                  </div>
+                                </div>
+                                <Tag color='green' shape='circle' size='small'>
+                                  {t('推荐')}
+                                </Tag>
+                              </div>
+                              <div className='text-sm text-semi-color-text-1 leading-6 min-h-[48px] line-clamp-2'>
+                                {model.description || t('已为你准备好稳定可用的默认接入能力')}
+                              </div>
+                              {model.tags && (
+                                <div className='flex flex-wrap gap-2 mt-4'>
+                                  {model.tags
+                                    .split(',')
+                                    .filter(Boolean)
+                                    .slice(0, 3)
+                                    .map((tag) => (
+                                      <Tag
+                                        key={`${model.model_name}-${tag}`}
+                                        size='small'
+                                        shape='circle'
+                                        color='white'
+                                      >
+                                        {tag}
+                                      </Tag>
+                                    ))}
+                                </div>
+                              )}
+                            </div>
+                          </Card>
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 {/* 框架兼容性图标 */}
                 <div className='mt-12 md:mt-16 lg:mt-20 w-full'>

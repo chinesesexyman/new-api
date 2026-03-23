@@ -11,10 +11,11 @@ import (
 
 func truncatePricingTables(t *testing.T) {
 	t.Helper()
-	DB.Exec("DELETE FROM abilities")
-	DB.Exec("DELETE FROM channels")
-	DB.Exec("DELETE FROM models")
-	DB.Exec("DELETE FROM vendors")
+	for _, table := range []string{"abilities", "channels", "models", "vendors"} {
+		if DB.Migrator().HasTable(table) {
+			DB.Exec("DELETE FROM " + table)
+		}
+	}
 	pricingMap = nil
 	vendorsList = nil
 	supportedEndpointMap = nil
@@ -24,10 +25,11 @@ func truncatePricingTables(t *testing.T) {
 	lastGetPricingTime = lastGetPricingTime.AddDate(-1, 0, 0)
 
 	t.Cleanup(func() {
-		DB.Exec("DELETE FROM abilities")
-		DB.Exec("DELETE FROM channels")
-		DB.Exec("DELETE FROM models")
-		DB.Exec("DELETE FROM vendors")
+		for _, table := range []string{"abilities", "channels", "models", "vendors"} {
+			if DB.Migrator().HasTable(table) {
+				DB.Exec("DELETE FROM " + table)
+			}
+		}
 		pricingMap = nil
 		vendorsList = nil
 		supportedEndpointMap = nil
@@ -198,4 +200,146 @@ func TestRefreshPricingRegexRulePriorityHigherThanPrefix(t *testing.T) {
 	}
 
 	t.Fatalf("expected pricing entry for gpt-5-codex")
+}
+
+func TestGetRecommendedPricingReturnsPricingSubset(t *testing.T) {
+	truncatePricingTables(t)
+
+	require.NoError(t, DB.AutoMigrate(&Ability{}, &Channel{}, &Model{}, &Vendor{}))
+
+	ch := &Channel{
+		Id:     1005,
+		Type:   constant.ChannelTypeOpenAI,
+		Name:   "pricing-recommended",
+		Key:    "test-key",
+		Status: common.ChannelStatusEnabled,
+		Group:  "default",
+		Models: "gpt-4o-mini,claude-3-5-sonnet",
+	}
+	require.NoError(t, DB.Create(ch).Error)
+
+	require.NoError(t, DB.Create(&Ability{
+		Group:     "default",
+		Model:     "gpt-4o-mini",
+		ChannelId: ch.Id,
+		Enabled:   true,
+	}).Error)
+	require.NoError(t, DB.Create(&Ability{
+		Group:     "default",
+		Model:     "claude-3-5-sonnet",
+		ChannelId: ch.Id,
+		Enabled:   true,
+	}).Error)
+
+	require.NoError(t, DB.Create(&Model{
+		ModelName:   "gpt-4o-mini",
+		NameRule:    NameRuleExact,
+		Status:      1,
+		Recommended: 1,
+	}).Error)
+	require.NoError(t, DB.Create(&Model{
+		ModelName:   "claude-3-5-sonnet",
+		NameRule:    NameRuleExact,
+		Status:      1,
+		Recommended: 0,
+	}).Error)
+
+	RefreshPricing()
+
+	allPricing := GetPricing()
+	recommendedPricing := GetRecommendedPricing()
+
+	require.Len(t, allPricing, 2)
+	require.Len(t, recommendedPricing, 1)
+	assert.Equal(t, "gpt-4o-mini", recommendedPricing[0].ModelName)
+	assert.True(t, recommendedPricing[0].Recommended)
+
+	foundRecommended := false
+	foundNonRecommended := false
+	for _, item := range allPricing {
+		switch item.ModelName {
+		case "gpt-4o-mini":
+			foundRecommended = true
+			assert.True(t, item.Recommended)
+		case "claude-3-5-sonnet":
+			foundNonRecommended = true
+			assert.False(t, item.Recommended)
+		}
+	}
+	assert.True(t, foundRecommended)
+	assert.True(t, foundNonRecommended)
+}
+
+func TestGetRecommendedPricingExcludesDisabledModels(t *testing.T) {
+	truncatePricingTables(t)
+
+	require.NoError(t, DB.AutoMigrate(&Ability{}, &Channel{}, &Model{}, &Vendor{}))
+
+	ch := &Channel{
+		Id:     1006,
+		Type:   constant.ChannelTypeOpenAI,
+		Name:   "pricing-recommended-disabled",
+		Key:    "test-key",
+		Status: common.ChannelStatusEnabled,
+		Group:  "default",
+		Models: "gpt-4.1",
+	}
+	require.NoError(t, DB.Create(ch).Error)
+
+	require.NoError(t, DB.Create(&Ability{
+		Group:     "default",
+		Model:     "gpt-4.1",
+		ChannelId: ch.Id,
+		Enabled:   true,
+	}).Error)
+
+	require.NoError(t, (&Model{
+		ModelName:   "gpt-4.1",
+		NameRule:    NameRuleExact,
+		Status:      0,
+		Recommended: 1,
+	}).Insert())
+
+	RefreshPricing()
+
+	assert.Empty(t, GetPricing())
+	assert.Empty(t, GetRecommendedPricing())
+}
+
+func TestModelInsertAndUpdatePersistRecommendedZeroValue(t *testing.T) {
+	truncatePricingTables(t)
+
+	require.NoError(t, DB.AutoMigrate(&Model{}))
+
+	meta := &Model{
+		ModelName:    "zero-value-model",
+		NameRule:     NameRuleExact,
+		Status:       1,
+		Recommended:  0,
+		SyncOfficial: 0,
+	}
+	require.NoError(t, meta.Insert())
+
+	var inserted Model
+	require.NoError(t, DB.First(&inserted, meta.Id).Error)
+	assert.Equal(t, 0, inserted.Recommended)
+	assert.Equal(t, 0, inserted.SyncOfficial)
+
+	inserted.Recommended = 1
+	inserted.SyncOfficial = 1
+	require.NoError(t, inserted.Update())
+
+	var updatedToOne Model
+	require.NoError(t, DB.First(&updatedToOne, inserted.Id).Error)
+	assert.Equal(t, 1, updatedToOne.Recommended)
+	assert.Equal(t, 1, updatedToOne.SyncOfficial)
+
+	updatedToOne.Recommended = 0
+	updatedToOne.SyncOfficial = 0
+	require.NoError(t, updatedToOne.Update())
+
+	var updatedBackToZero Model
+	require.NoError(t, DB.First(&updatedBackToZero, inserted.Id).Error)
+	assert.Equal(t, 0, updatedBackToZero.Recommended)
+	assert.Equal(t, 0, updatedBackToZero.SyncOfficial)
 }

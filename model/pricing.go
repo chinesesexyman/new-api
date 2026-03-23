@@ -28,6 +28,7 @@ type Pricing struct {
 	CompletionRatio        float64                 `json:"completion_ratio"`
 	EnableGroup            []string                `json:"enable_groups"`
 	SupportedEndpointTypes []constant.EndpointType `json:"supported_endpoint_types"`
+	Recommended            bool                    `json:"recommended"`
 	PricingVersion         string                  `json:"pricing_version,omitempty"`
 }
 
@@ -77,6 +78,17 @@ func GetVendors() []PricingVendor {
 		GetPricing()
 	}
 	return vendorsList
+}
+
+func GetRecommendedPricing() []Pricing {
+	pricing := GetPricing()
+	recommended := make([]Pricing, 0, len(pricing))
+	for _, item := range pricing {
+		if item.Recommended {
+			recommended = append(recommended, item)
+		}
+	}
+	return recommended
 }
 
 func GetModelSupportEndpointTypes(model string) []constant.EndpointType {
@@ -299,6 +311,7 @@ func updatePricing() {
 			pricing.Icon = meta.Icon
 			pricing.Tags = meta.Tags
 			pricing.VendorID = meta.VendorID
+			pricing.Recommended = meta.Recommended == 1
 			if strings.TrimSpace(meta.Extra) != "" {
 				var extra interface{}
 				if err := common.Unmarshal([]byte(meta.Extra), &extra); err != nil {

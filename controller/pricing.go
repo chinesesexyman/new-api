@@ -10,6 +10,15 @@ import (
 
 func GetPricing(c *gin.Context) {
 	pricing := model.GetPricing()
+	c.JSON(200, buildPricingResponse(c, pricing))
+}
+
+func GetRecommendedPricing(c *gin.Context) {
+	pricing := model.GetRecommendedPricing()
+	c.JSON(200, buildPricingResponse(c, pricing))
+}
+
+func buildPricingResponse(c *gin.Context, pricing []model.Pricing) gin.H {
 	userId, exists := c.Get("id")
 	usableGroup := map[string]string{}
 	groupRatio := map[string]float64{}
@@ -38,7 +47,7 @@ func GetPricing(c *gin.Context) {
 		}
 	}
 
-	c.JSON(200, gin.H{
+	return gin.H{
 		"success":            true,
 		"data":               pricing,
 		"vendors":            model.GetVendors(),
@@ -47,7 +56,7 @@ func GetPricing(c *gin.Context) {
 		"supported_endpoint": model.GetSupportedEndpointMap(),
 		"auto_groups":        service.GetUserAutoGroup(group),
 		"_":                  "a42d372ccf0b5dd13ecf71203521f9d2",
-	})
+	}
 }
 
 func ResetModelRatio(c *gin.Context) {

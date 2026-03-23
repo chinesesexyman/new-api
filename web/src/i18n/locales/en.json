@@ -3183,6 +3183,12 @@
     "默认折叠侧边栏": "Default collapse sidebar",
     "默认测试模型": "Default Test Model",
     "默认用户消息": "Default User Message",
-    "默认补全倍率": "Default completion ratio"
+    "默认补全倍率": "Default completion ratio",
+    "推荐模型": "Recommended Models",
+    "从模型广场中精选的热门能力，适合快速开始": "Curated picks from the model marketplace to help you get started quickly",
+    "查看全部": "View All",
+    "精选模型": "Featured Model",
+    "推荐": "Recommended",
+    "已为你准备好稳定可用的默认接入能力": "Ready-to-use stable defaults have been prepared for you"
   }
 }

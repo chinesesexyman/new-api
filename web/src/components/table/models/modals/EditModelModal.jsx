@@ -127,6 +127,7 @@ const EditModelModal = (props) => {
     extra: '',
     name_rule: props.editingModel?.model_name ? 0 : undefined, // 通过未配置模型过来的固定为精确匹配
     status: true,
+    recommended: false,
     sync_official: true,
   });
 
@@ -158,6 +159,7 @@ const EditModelModal = (props) => {
         }
         // 处理status/sync_official，将数字转为布尔值
         data.status = data.status === 1;
+        data.recommended = (data.recommended ?? 0) === 1;
         data.sync_official = (data.sync_official ?? 1) === 1;
         if (formApiRef.current) {
           formApiRef.current.setValues({ ...getInitValues(), ...data });
@@ -206,6 +208,7 @@ const EditModelModal = (props) => {
         endpoints: values.endpoints || '',
         extra: values.extra || '',
         status: values.status ? 1 : 0,
+        recommended: values.recommended ? 1 : 0,
         sync_official: values.sync_official ? 1 : 0,
       };
 
@@ -570,6 +573,16 @@ const EditModelModal = (props) => {
                       extraText={t(
                         '可选的模型扩展配置，将原样保存到 models.extra，并在 /api/pricing 中以 extra 返回',
                       )}
+                    />
+                  </Col>
+                  <Col span={24}>
+                    <Form.Switch
+                      field='recommended'
+                      label={t('推荐模型')}
+                      extraText={t(
+                        '开启后，该模型会出现在 /api/pricing/recommended 返回结果中',
+                      )}
+                      size='large'
                     />
                   </Col>
                   <Col span={24}>
