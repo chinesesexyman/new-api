@@ -22,29 +22,47 @@ import { initReactI18next } from 'react-i18next';
 import LanguageDetector from 'i18next-browser-languagedetector';
 
 import enTranslation from './locales/en.json';
-import frTranslation from './locales/fr.json';
 import zhCNTranslation from './locales/zh-CN.json';
-import zhTWTranslation from './locales/zh-TW.json';
-import ruTranslation from './locales/ru.json';
-import jaTranslation from './locales/ja.json';
-import viTranslation from './locales/vi.json';
+
+export const DEFAULT_LANGUAGE = 'en';
+export const SUPPORTED_LANGUAGES = ['en', 'zh-CN'];
+
+export function normalizeAppLanguage(lang) {
+  const normalized = String(lang || '')
+    .trim()
+    .toLowerCase();
+
+  if (!normalized) {
+    return DEFAULT_LANGUAGE;
+  }
+  if (normalized === 'zh' || normalized.startsWith('zh-')) {
+    return 'zh-CN';
+  }
+  if (normalized.startsWith('en')) {
+    return 'en';
+  }
+  return DEFAULT_LANGUAGE;
+}
 
 i18n
   .use(LanguageDetector)
   .use(initReactI18next)
   .init({
     load: 'currentOnly',
+    supportedLngs: SUPPORTED_LANGUAGES,
     resources: {
       en: enTranslation,
       'zh-CN': zhCNTranslation,
-      'zh-TW': zhTWTranslation,
-      fr: frTranslation,
-      ru: ruTranslation,
-      ja: jaTranslation,
-      vi: viTranslation,
     },
-    fallbackLng: 'zh-CN',
+    fallbackLng: DEFAULT_LANGUAGE,
+    lng: DEFAULT_LANGUAGE,
+    nonExplicitSupportedLngs: false,
     nsSeparator: false,
+    detection: {
+      order: ['querystring', 'localStorage', 'navigator', 'htmlTag'],
+      caches: ['localStorage'],
+      convertDetectedLanguage: (lng) => normalizeAppLanguage(lng),
+    },
     interpolation: {
       escapeValue: false,
     },

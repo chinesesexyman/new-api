@@ -23,23 +23,22 @@ import { Languages } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { API, showSuccess, showError } from "../../../../helpers";
 import { UserContext } from "../../../../context/User";
+import {
+	DEFAULT_LANGUAGE,
+	normalizeAppLanguage,
+} from "../../../../i18n/i18n";
 
 // Language options with native names
 const languageOptions = [
-	{ value: "zh-CN", label: "简体中文" },
-	{ value: "zh-TW", label: "繁體中文" },
 	{ value: "en", label: "English" },
-	{ value: 'fr', label: 'Français'},
-	{ value: 'ru', label: 'Русский'},
-	{ value: 'ja', label: '日本語'},
-	{ value: "vi", label: "Tiếng Việt" },
+	{ value: "zh-CN", label: "简体中文" },
 ];
 
 const PreferencesSettings = ({ t }) => {
 	const { i18n } = useTranslation();
 	const [userState, userDispatch] = useContext(UserContext);
 	const [currentLanguage, setCurrentLanguage] = useState(
-		i18n.language || "zh-CN",
+		normalizeAppLanguage(i18n.language || DEFAULT_LANGUAGE),
 	);
 	const [loading, setLoading] = useState(false);
 
@@ -49,10 +48,8 @@ const PreferencesSettings = ({ t }) => {
 			try {
 				const settings = JSON.parse(userState.user.setting);
 				if (settings.language) {
-					// Normalize legacy "zh" to "zh-CN" for backward compatibility
-					const lang = settings.language === "zh" ? "zh-CN" : settings.language;
+					const lang = normalizeAppLanguage(settings.language);
 					setCurrentLanguage(lang);
-					// Sync i18n with saved preference
 					if (i18n.language !== lang) {
 						i18n.changeLanguage(lang);
 					}
@@ -64,6 +61,7 @@ const PreferencesSettings = ({ t }) => {
 	}, [userState?.user?.setting, i18n]);
 
 	const handleLanguagePreferenceChange = async (lang) => {
+		lang = normalizeAppLanguage(lang);
 		if (lang === currentLanguage) return;
 
 		setLoading(true);

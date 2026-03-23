@@ -24,14 +24,14 @@ import { useIsMobile } from '../../../../hooks/common/useIsMobile';
 const SyncWizardModal = ({ visible, onClose, onConfirm, loading, t }) => {
   const [step, setStep] = useState(0);
   const [option, setOption] = useState('official');
-  const [locale, setLocale] = useState('zh-CN');
+  const [locale, setLocale] = useState('en');
   const isMobile = useIsMobile();
 
   useEffect(() => {
     if (visible) {
       setStep(0);
       setOption('official');
-      setLocale('zh-CN');
+      setLocale('en');
     }
   }, [visible]);
 
@@ -117,12 +117,6 @@ const SyncWizardModal = ({ visible, onClose, onConfirm, loading, t }) => {
               </Radio>
               <Radio value='zh-CN' extra='简体中文'>
                 zh-CN
-              </Radio>
-              <Radio value='zh-TW' extra='繁體中文'>
-                zh-TW
-              </Radio>
-              <Radio value='ja' extra='日本語'>
-                ja
               </Radio>
             </RadioGroup>
           </div>

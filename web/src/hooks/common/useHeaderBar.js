@@ -27,6 +27,7 @@ import { getLogo, getSystemName, API, showSuccess } from '../../helpers';
 import { useIsMobile } from './useIsMobile';
 import { useSidebarCollapsed } from './useSidebarCollapsed';
 import { useMinimumLoadingTime } from './useMinimumLoadingTime';
+import { normalizeAppLanguage } from '../../i18n/i18n';
 
 export const useHeaderBar = ({ onMobileMenuToggle, drawerOpen }) => {
   const { t, i18n } = useTranslation();
@@ -36,7 +37,9 @@ export const useHeaderBar = ({ onMobileMenuToggle, drawerOpen }) => {
   const [collapsed, toggleCollapsed] = useSidebarCollapsed();
   const [logoLoaded, setLogoLoaded] = useState(false);
   const navigate = useNavigate();
-  const [currentLang, setCurrentLang] = useState(i18n.language);
+  const [currentLang, setCurrentLang] = useState(
+    normalizeAppLanguage(i18n.language),
+  );
   const location = useLocation();
 
   const loading = statusState?.status === undefined;
@@ -147,6 +150,7 @@ export const useHeaderBar = ({ onMobileMenuToggle, drawerOpen }) => {
 
   const handleLanguageChange = useCallback(
     async (lang) => {
+      lang = normalizeAppLanguage(lang);
       // Change language immediately for responsive UX
       i18n.changeLanguage(lang);
 

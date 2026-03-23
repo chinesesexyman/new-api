@@ -37,6 +37,7 @@ import {
 import { UserContext } from '../../context/User';
 import { StatusContext } from '../../context/Status';
 import { useLocation } from 'react-router-dom';
+import { normalizeAppLanguage } from '../../i18n/i18n';
 const { Sider, Content, Header } = Layout;
 
 const PageLayout = () => {
@@ -114,9 +115,7 @@ const PageLayout = () => {
       }
     }
     const savedLang = localStorage.getItem('i18nextLng');
-    if (savedLang) {
-      i18n.changeLanguage(savedLang);
-    }
+    i18n.changeLanguage(normalizeAppLanguage(savedLang));
   }, [i18n]);
 
   return (
