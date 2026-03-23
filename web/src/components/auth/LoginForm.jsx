@@ -505,7 +505,11 @@ const LoginForm = () => {
       <div className='flex flex-col items-center'>
         <div className='w-full max-w-md'>
           <div className='flex items-center justify-center mb-6 gap-2'>
-            <img src={logo} alt='Logo' className='h-10 rounded-full' />
+            <img
+              src={logo}
+              alt='Logo'
+              className='h-10 max-w-[160px] object-contain'
+            />
             <Title heading={3} className='!text-gray-800'>
               {systemName}
             </Title>
@@ -721,7 +725,11 @@ const LoginForm = () => {
       <div className='flex flex-col items-center'>
         <div className='w-full max-w-md'>
           <div className='flex items-center justify-center mb-6 gap-2'>
-            <img src={logo} alt='Logo' className='h-10 rounded-full' />
+            <img
+              src={logo}
+              alt='Logo'
+              className='h-10 max-w-[160px] object-contain'
+            />
             <Title heading={3}>{systemName}</Title>
           </div>
 
