@@ -193,7 +193,7 @@ export default function ModelSettingsVisualEditor(props) {
       ),
     },
     {
-      title: t('模型固定价格'),
+      title: t('模型固定价格（USD / 次）'),
       dataIndex: 'price',
       key: 'price',
       render: (text, record) => (
@@ -739,8 +739,9 @@ export default function ModelSettingsVisualEditor(props) {
           {pricingMode === 'per-request' && (
             <Form.Input
               field='priceInput'
-              label={t('固定价格(每次)')}
-              placeholder={t('输入每次价格')}
+              label={t('固定价格（USD / 次）')}
+              placeholder={t('输入每次调用的美元价格')}
+              suffix='USD'
               onChange={(value) =>
                 setCurrentModel((prev) => ({
                   ...(prev || {}),

@@ -488,8 +488,9 @@ export default function ModelRatioNotSetEditor(props) {
           {currentModel?.priceMode ? (
             <Form.Input
               field='price'
-              label={t('固定价格(每次)')}
-              placeholder={t('输入每次价格')}
+              label={t('固定价格（USD / 次）')}
+              placeholder={t('输入每次调用的美元价格')}
+              suffix='USD'
               onChange={(value) =>
                 setCurrentModel((prev) => ({ ...prev, price: value }))
               }
