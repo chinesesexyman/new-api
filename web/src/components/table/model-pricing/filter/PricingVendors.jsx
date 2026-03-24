@@ -118,6 +118,7 @@ const PricingVendors = ({
       activeValue={filterVendor}
       onChange={setFilterVendor}
       loading={loading}
+      columns={1}
       variant='violet'
       t={t}
     />

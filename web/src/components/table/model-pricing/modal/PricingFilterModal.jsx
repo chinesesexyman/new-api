@@ -46,7 +46,7 @@ const PricingFilterModal = ({ visible, onClose, sidebarProps, t }) => {
 
   return (
     <Modal
-      title={t('筛选')}
+      title={t('显示设置')}
       visible={visible}
       onCancel={onClose}
       footer={footer}

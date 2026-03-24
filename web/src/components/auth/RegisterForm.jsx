@@ -68,6 +68,14 @@ import { SiDiscord } from 'react-icons/si';
 const RegisterForm = () => {
   let navigate = useNavigate();
   const { t } = useTranslation();
+  const socialButtonClasses =
+    'w-full h-12 flex items-center justify-center !rounded-full border !border-[#ddd6fe] !bg-white/90 hover:!bg-[#f5f3ff] dark:!border-[#4c1d95] dark:!bg-[#140b29] dark:hover:!bg-[#1d1038] transition-colors';
+  const primaryPurpleButtonClasses =
+    'w-full h-12 flex items-center justify-center !rounded-full !border-0 !bg-[#6d28d9] !text-white hover:!bg-[#5b21b6] dark:!bg-[#7c3aed] dark:hover:!bg-[#6d28d9] transition-colors';
+  const purpleLinkClasses =
+    'text-[#6d28d9] hover:text-[#5b21b6] dark:text-[#c4b5fd] dark:hover:text-[#ddd6fe]';
+  const purpleActionLinkClasses =
+    '!text-[#6d28d9] hover:!text-[#5b21b6] dark:!text-[#c4b5fd] dark:hover:!text-[#ddd6fe]';
   const githubButtonTextKeyByState = {
     idle: '使用 GitHub 继续',
     redirecting: '正在跳转 GitHub...',
@@ -401,14 +409,17 @@ const RegisterForm = () => {
               alt='Logo'
               className='h-10 max-w-[160px] object-contain'
             />
-            <Title heading={3} className='!text-gray-800'>
+            <Title heading={3} className='!text-[#2e1065] dark:!text-[#ede9fe]'>
               {systemName}
             </Title>
           </div>
 
-          <Card className='border-0 !rounded-2xl overflow-hidden'>
+          <Card className='border-0 !rounded-2xl overflow-hidden !bg-white/95 dark:!bg-[#120a23] shadow-[0_24px_80px_rgba(109,40,217,0.12)] dark:shadow-[0_24px_80px_rgba(15,23,42,0.45)]'>
             <div className='flex justify-center pt-6 pb-2'>
-              <Title heading={3} className='text-gray-800 dark:text-gray-200'>
+              <Title
+                heading={3}
+                className='!text-[#2e1065] dark:!text-[#ede9fe]'
+              >
                 {t('注 册')}
               </Title>
             </div>
@@ -417,7 +428,7 @@ const RegisterForm = () => {
                 {status.wechat_login && (
                   <Button
                     theme='outline'
-                    className='w-full h-12 flex items-center justify-center !rounded-full border border-gray-200 hover:bg-gray-50 transition-colors'
+                    className={socialButtonClasses}
                     type='tertiary'
                     icon={
                       <Icon svg={<WeChatIcon />} style={{ color: '#07C160' }} />
@@ -432,7 +443,7 @@ const RegisterForm = () => {
                 {status.github_oauth && (
                   <Button
                     theme='outline'
-                    className='w-full h-12 flex items-center justify-center !rounded-full border border-gray-200 hover:bg-gray-50 transition-colors'
+                    className={socialButtonClasses}
                     type='tertiary'
                     icon={<IconGithubLogo size='large' />}
                     onClick={handleGitHubClick}
@@ -446,7 +457,7 @@ const RegisterForm = () => {
                 {status.discord_oauth && (
                   <Button
                     theme='outline'
-                    className='w-full h-12 flex items-center justify-center !rounded-full border border-gray-200 hover:bg-gray-50 transition-colors'
+                    className={socialButtonClasses}
                     type='tertiary'
                     icon={
                       <SiDiscord
@@ -467,7 +478,7 @@ const RegisterForm = () => {
                 {status.oidc_enabled && (
                   <Button
                     theme='outline'
-                    className='w-full h-12 flex items-center justify-center !rounded-full border border-gray-200 hover:bg-gray-50 transition-colors'
+                    className={socialButtonClasses}
                     type='tertiary'
                     icon={<OIDCIcon style={{ color: '#1877F2' }} />}
                     onClick={handleOIDCClick}
@@ -480,7 +491,7 @@ const RegisterForm = () => {
                 {status.linuxdo_oauth && (
                   <Button
                     theme='outline'
-                    className='w-full h-12 flex items-center justify-center !rounded-full border border-gray-200 hover:bg-gray-50 transition-colors'
+                    className={socialButtonClasses}
                     type='tertiary'
                     icon={
                       <LinuxDoIcon
@@ -503,7 +514,7 @@ const RegisterForm = () => {
                     <Button
                       key={provider.slug}
                       theme='outline'
-                      className='w-full h-12 flex items-center justify-center !rounded-full border border-gray-200 hover:bg-gray-50 transition-colors'
+                      className={socialButtonClasses}
                       type='tertiary'
                       icon={getOAuthProviderIcon(provider.icon || '', 20)}
                       onClick={() => handleCustomOAuthClick(provider)}
@@ -531,7 +542,7 @@ const RegisterForm = () => {
                 <Button
                   theme='solid'
                   type='primary'
-                  className='w-full h-12 flex items-center justify-center bg-black text-white !rounded-full hover:bg-gray-800 transition-colors'
+                  className={primaryPurpleButtonClasses}
                   icon={<IconMail size='large' />}
                   onClick={handleEmailRegisterClick}
                   loading={emailRegisterLoading}
@@ -545,7 +556,7 @@ const RegisterForm = () => {
                   {t('已有账户？')}{' '}
                   <Link
                     to='/login'
-                    className='text-blue-600 hover:text-blue-800 font-medium'
+                    className={`${purpleActionLinkClasses} font-medium`}
                   >
                     {t('登录')}
                   </Link>
@@ -568,14 +579,17 @@ const RegisterForm = () => {
               alt='Logo'
               className='h-10 max-w-[160px] object-contain'
             />
-            <Title heading={3} className='!text-gray-800'>
+            <Title heading={3} className='!text-[#2e1065] dark:!text-[#ede9fe]'>
               {systemName}
             </Title>
           </div>
 
-          <Card className='border-0 !rounded-2xl overflow-hidden'>
+          <Card className='border-0 !rounded-2xl overflow-hidden !bg-white/95 dark:!bg-[#120a23] shadow-[0_24px_80px_rgba(109,40,217,0.12)] dark:shadow-[0_24px_80px_rgba(15,23,42,0.45)]'>
             <div className='flex justify-center pt-6 pb-2'>
-              <Title heading={3} className='text-gray-800 dark:text-gray-200'>
+              <Title
+                heading={3}
+                className='!text-[#2e1065] dark:!text-[#ede9fe]'
+              >
                 {t('注 册')}
               </Title>
             </div>
@@ -651,7 +665,10 @@ const RegisterForm = () => {
                       checked={agreedToTerms}
                       onChange={(e) => setAgreedToTerms(e.target.checked)}
                     >
-                      <Text size='small' className='text-gray-600'>
+                      <Text
+                        size='small'
+                        className='text-gray-600 dark:text-slate-300'
+                      >
                         {t('我已阅读并同意')}
                         {hasUserAgreement && (
                           <>
@@ -659,7 +676,7 @@ const RegisterForm = () => {
                               href='/user-agreement'
                               target='_blank'
                               rel='noopener noreferrer'
-                              className='text-blue-600 hover:text-blue-800 mx-1'
+                              className={`${purpleLinkClasses} mx-1`}
                             >
                               {t('用户协议')}
                             </a>
@@ -672,7 +689,7 @@ const RegisterForm = () => {
                               href='/privacy-policy'
                               target='_blank'
                               rel='noopener noreferrer'
-                              className='text-blue-600 hover:text-blue-800 mx-1'
+                              className={`${purpleLinkClasses} mx-1`}
                             >
                               {t('隐私政策')}
                             </a>
@@ -686,7 +703,7 @@ const RegisterForm = () => {
                 <div className='space-y-2 pt-2'>
                   <Button
                     theme='solid'
-                    className='w-full !rounded-full'
+                    className='w-full !rounded-full !border-0 !bg-[#6d28d9] !text-white hover:!bg-[#5b21b6] dark:!bg-[#7c3aed] dark:hover:!bg-[#6d28d9]'
                     type='primary'
                     htmlType='submit'
                     onClick={handleSubmit}
@@ -725,7 +742,7 @@ const RegisterForm = () => {
                   {t('已有账户？')}{' '}
                   <Link
                     to='/login'
-                    className='text-blue-600 hover:text-blue-800 font-medium'
+                    className={`${purpleActionLinkClasses} font-medium`}
                   >
                     {t('登录')}
                   </Link>
@@ -789,8 +806,7 @@ const RegisterForm = () => {
         style={{ top: '50%', left: '-120px' }}
       />
       <div className='w-full max-w-sm mt-[60px]'>
-        {showEmailRegister ||
-        !hasOAuthRegisterOptions
+        {showEmailRegister || !hasOAuthRegisterOptions
           ? renderEmailRegisterForm()
           : renderOAuthOptions()}
         {renderWeChatLoginModal()}

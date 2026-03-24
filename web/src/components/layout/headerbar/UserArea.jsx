@@ -151,7 +151,7 @@ const UserArea = ({
       '!bg-semi-color-fill-0 dark:!bg-semi-color-fill-1 hover:!bg-semi-color-fill-1 dark:hover:!bg-gray-700 transition-colors';
     let loginButtonClasses = `${commonSizingAndLayoutClass} ${loginButtonSpecificStyling}`;
 
-    let registerButtonClasses = `${commonSizingAndLayoutClass}`;
+    let registerButtonClasses = `${commonSizingAndLayoutClass} !bg-[#6d28d9] hover:!bg-[#5b21b6] dark:!bg-[#7c3aed] dark:hover:!bg-[#6d28d9] transition-colors`;
 
     const loginButtonTextSpanClass =
       '!text-xs !text-semi-color-text-1 dark:!text-gray-300 !p-1.5';

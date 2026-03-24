@@ -18,8 +18,7 @@ For commercial licensing, please contact support@quantumnous.com
 */
 
 import React from 'react';
-import { Layout, ImagePreview } from '@douyinfe/semi-ui';
-import PricingSidebar from './PricingSidebar';
+import { ImagePreview } from '@douyinfe/semi-ui';
 import PricingContent from './content/PricingContent';
 import ModelDetailSideSheet from '../modal/ModelDetailSideSheet';
 import { useModelPricingData } from '../../../../hooks/model-pricing/useModelPricingData';
@@ -27,7 +26,6 @@ import { useIsMobile } from '../../../../hooks/common/useIsMobile';
 
 const PricingPage = () => {
   const pricingData = useModelPricingData();
-  const { Sider, Content } = Layout;
   const isMobile = useIsMobile();
   const [showRatio, setShowRatio] = React.useState(false);
   const [viewMode, setViewMode] = React.useState('card');
@@ -40,22 +38,16 @@ const PricingPage = () => {
   };
 
   return (
-    <div className='bg-white'>
-      <Layout className='pricing-layout'>
-        {!isMobile && (
-          <Sider className='pricing-scroll-hide pricing-sidebar'>
-            <PricingSidebar {...allProps} />
-          </Sider>
-        )}
-
-        <Content className='pricing-scroll-hide pricing-content'>
+    <div className='pricing-page-shell'>
+      <div className='pricing-layout'>
+        <div className='pricing-content'>
           <PricingContent
             {...allProps}
             isMobile={isMobile}
             sidebarProps={allProps}
           />
-        </Content>
-      </Layout>
+        </div>
+      </div>
 
       <ImagePreview
         src={pricingData.modalImageUrl}

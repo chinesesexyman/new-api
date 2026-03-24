@@ -18,13 +18,7 @@ For commercial licensing, please contact support@quantumnous.com
 */
 
 import React, { useContext, useEffect, useState } from 'react';
-import {
-  Button,
-  Typography,
-  Card,
-  Tag,
-  Avatar,
-} from '@douyinfe/semi-ui';
+import { Button, Typography, Card, Tag, Avatar } from '@douyinfe/semi-ui';
 import { API, showError, getLobeHubIcon } from '../../helpers';
 import { useIsMobile } from '../../hooks/common/useIsMobile';
 import { StatusContext } from '../../context/Status';
@@ -214,18 +208,20 @@ const Home = () => {
                     </>
                   </h1>
                   <p className='text-base md:text-lg lg:text-xl text-semi-color-text-1 mt-4 md:mt-6 max-w-xl'>
-                    {t('一站式 API 接入， 覆盖 OpenAI、Anthropic、Google 等300 + 顶尖 AI 模型。更低成本、更高稳定、更快响应。')}
+                    {t(
+                      '一站式 API 接入， 覆盖 OpenAI、Anthropic、Google 等300 + 顶尖 AI 模型。更低成本、更高稳定、更快响应。',
+                    )}
                   </p>
                 </div>
 
                 {/* 操作按钮 */}
                 <div className='flex flex-row gap-4 justify-center items-center'>
-                  <Link to='/console'>
+                  <Link to='/console/token'>
                     <Button
                       theme='solid'
                       type='primary'
                       size={isMobile ? 'default' : 'large'}
-                      className='!rounded-3xl px-8 py-2'
+                      className='home-hero-primary-btn !rounded-3xl !w-[190px] md:!w-[220px] !h-[48px] md:!h-[54px] !text-base md:!text-lg !font-semibold'
                       icon={<IconPlay />}
                     >
                       {t('获取API Key')}
@@ -249,7 +245,7 @@ const Home = () => {
                     <Link to='/docs/model-access'>
                       <Button
                         size={isMobile ? 'default' : 'large'}
-                        className='flex items-center !rounded-3xl px-6 py-2'
+                        className='home-hero-secondary-btn flex items-center justify-center !rounded-3xl !w-[190px] md:!w-[220px] !h-[48px] md:!h-[54px] !text-base md:!text-lg !font-semibold'
                         icon={<IconFile />}
                       >
                         {t('API文档')}
@@ -265,26 +261,23 @@ const Home = () => {
                         <Text className='text-lg md:text-xl font-semibold text-semi-color-text-0'>
                           {t('推荐模型')}
                         </Text>
-                        <div className='text-sm text-semi-color-text-2 mt-1'>
-                          {t('从模型广场中精选的热门能力，适合快速开始')}
-                        </div>
                       </div>
                       <Link to='/pricing'>
                         <Button
                           theme='borderless'
                           type='primary'
-                          className='!rounded-full'
+                          className='!rounded-full !text-[#6d28d9] hover:!text-[#5b21b6] hover:!bg-[#f5f3ff] dark:!text-[#c4b5fd] dark:hover:!text-[#ddd6fe] dark:hover:!bg-[#24113f]'
                         >
                           {t('查看全部')}
                         </Button>
                       </Link>
                     </div>
-                    <div className='grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4'>
+                    <div className='flex gap-4 overflow-x-auto scrollbar-hide px-1 pb-2 snap-x snap-mandatory'>
                       {recommendedModels.map((model) => (
                         <Link
                           key={model.model_name}
                           to='/pricing'
-                          className='block'
+                          className='block shrink-0 w-[280px] md:w-[320px] snap-start'
                         >
                           <Card
                             className='!rounded-3xl border-0 shadow-sm hover:shadow-lg transition-all duration-200 h-full text-left backdrop-blur-sm'
@@ -297,7 +290,7 @@ const Home = () => {
                                     {renderModelIcon(model)}
                                   </div>
                                   <div className='min-w-0'>
-                                    <div className='text-base font-semibold text-semi-color-text-0 truncate'>
+                                    <div className='text-base font-semibold text-semi-color-text-0 leading-6 min-h-[48px] line-clamp-2 break-words'>
                                       {model.model_name}
                                     </div>
                                     <div className='text-xs text-semi-color-text-2 truncate'>
@@ -305,31 +298,30 @@ const Home = () => {
                                     </div>
                                   </div>
                                 </div>
-                                <Tag color='green' shape='circle' size='small'>
-                                  {t('推荐')}
-                                </Tag>
+                                {model.tags ? (
+                                  <div className='flex flex-wrap justify-end gap-2 shrink-0 max-w-[45%]'>
+                                    {model.tags
+                                      .split(',')
+                                      .filter(Boolean)
+                                      .slice(0, 3)
+                                      .map((tag) => (
+                                        <Tag
+                                          key={`${model.model_name}-${tag}`}
+                                          size='small'
+                                          shape='circle'
+                                          className='pricing-model-pill'
+                                        >
+                                          {tag}
+                                        </Tag>
+                                      ))}
+                                  </div>
+                                ) : null}
                               </div>
-                              <div className='text-sm text-semi-color-text-1 leading-6 min-h-[48px] line-clamp-2'>
-                                {model.description || t('已为你准备好稳定可用的默认接入能力')}
-                              </div>
-                              {model.tags && (
-                                <div className='flex flex-wrap gap-2 mt-4'>
-                                  {model.tags
-                                    .split(',')
-                                    .filter(Boolean)
-                                    .slice(0, 3)
-                                    .map((tag) => (
-                                      <Tag
-                                        key={`${model.model_name}-${tag}`}
-                                        size='small'
-                                        shape='circle'
-                                        color='white'
-                                      >
-                                        {tag}
-                                      </Tag>
-                                    ))}
+                              {model.description ? (
+                                <div className='text-sm text-semi-color-text-1 leading-6 min-h-[48px] line-clamp-2'>
+                                  {model.description}
                                 </div>
-                              )}
+                              ) : null}
                             </div>
                           </Card>
                         </Link>

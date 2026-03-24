@@ -18,7 +18,7 @@ For commercial licensing, please contact support@quantumnous.com
 */
 
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, NavLink } from 'react-router-dom';
 import SkeletonWrapper from '../components/SkeletonWrapper';
 
 const Navigation = ({
@@ -31,10 +31,11 @@ const Navigation = ({
   const renderNavLinks = () => {
     const baseClasses =
       'flex-shrink-0 flex items-center gap-1 font-semibold rounded-md transition-all duration-200 ease-in-out';
-    const hoverClasses = 'hover:text-semi-color-primary';
+    const hoverClasses = 'hover:text-[#6d28d9] dark:hover:text-[#c4b5fd]';
     const spacingClasses = isMobile ? 'p-1' : 'p-2';
-
-    const commonLinkClasses = `${baseClasses} ${spacingClasses} ${hoverClasses}`;
+    const defaultTextClasses = 'text-semi-color-text-1 dark:text-slate-300';
+    const activeTextClasses = '!text-[#6d28d9] dark:!text-[#c4b5fd]';
+    const commonLinkClasses = `${baseClasses} ${spacingClasses} ${hoverClasses} ${defaultTextClasses}`;
 
     return mainNavLinks.map((link) => {
       const linkContent = <span>{link.text}</span>;
@@ -62,9 +63,16 @@ const Navigation = ({
       }
 
       return (
-        <Link key={link.itemKey} to={targetPath} className={commonLinkClasses}>
+        <NavLink
+          key={link.itemKey}
+          to={targetPath}
+          end={link.to === '/'}
+          className={({ isActive }) =>
+            `${commonLinkClasses} ${isActive ? activeTextClasses : ''}`
+          }
+        >
           {linkContent}
-        </Link>
+        </NavLink>
       );
     });
   };

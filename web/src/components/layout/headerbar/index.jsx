@@ -44,6 +44,7 @@ const HeaderBar = ({ onMobileMenuToggle, drawerOpen }) => {
     isDemoSiteMode,
     isConsoleRoute,
     theme,
+    actualTheme,
     headerNavModules,
     pricingRequireAuth,
     logout,
@@ -65,7 +66,13 @@ const HeaderBar = ({ onMobileMenuToggle, drawerOpen }) => {
   const { mainNavLinks } = useNavigation(t, docsLink, headerNavModules);
 
   return (
-    <header className='text-semi-color-text-0 sticky top-0 z-50 transition-colors duration-300 bg-white/75 dark:bg-zinc-900/75 backdrop-blur-lg'>
+    <header
+      className='text-semi-color-text-0 sticky top-0 z-50 transition-colors duration-300 !bg-white dark:!bg-[#0f172a]'
+      style={{
+        backgroundColor: actualTheme === 'dark' ? '#0f172a' : '#ffffff',
+        opacity: 1,
+      }}
+    >
       <NoticeModal
         visible={noticeVisible}
         onClose={handleNoticeClose}
