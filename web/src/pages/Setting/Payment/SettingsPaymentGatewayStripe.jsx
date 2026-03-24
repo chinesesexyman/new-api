@@ -43,7 +43,7 @@ export default function SettingsPaymentGateway(props) {
     StripeApiSecret: '',
     StripeWebhookSecret: '',
     StripePriceId: '',
-    StripeUnitPrice: 8.0,
+    StripeUnitPrice: 1.0,
     StripeMinTopUp: 1,
     StripePromotionCodesEnabled: false,
   });
@@ -59,7 +59,7 @@ export default function SettingsPaymentGateway(props) {
         StripeUnitPrice:
           props.options.StripeUnitPrice !== undefined
             ? parseFloat(props.options.StripeUnitPrice)
-            : 8.0,
+            : 1.0,
         StripeMinTopUp:
           props.options.StripeMinTopUp !== undefined
             ? parseFloat(props.options.StripeMinTopUp)
@@ -229,8 +229,8 @@ export default function SettingsPaymentGateway(props) {
               <Form.InputNumber
                 field='StripeUnitPrice'
                 precision={2}
-                label={t('充值价格（x元/美金）')}
-                placeholder={t('例如：7，就是7元/美金')}
+                label={t('Stripe 充值价格（USD / 额度单位）')}
+                placeholder={t('例如：1，就是每 1 美元额度按 1 美元计价')}
               />
             </Col>
             <Col xs={24} sm={24} md={8} lg={8} xl={8}>

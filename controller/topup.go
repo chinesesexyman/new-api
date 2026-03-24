@@ -142,8 +142,8 @@ func buildEpayPurchase(tradeNo string, paymentMethod string, amount int64, payMo
 
 func getPayMoney(amount int64, group string) float64 {
 	dAmount := decimal.NewFromInt(amount)
-	// 充值金额以“展示类型”为准：
-	// - USD/CNY: 前端传 amount 为金额单位；TOKENS: 前端传 tokens，需要换成 USD 金额
+	// 充值金额统一以 USD 额度单位为基准；
+	// 仅 TOKENS 展示模式下，前端传 tokens，需要先换算为 USD 额度单位。
 	if operation_setting.GetQuotaDisplayType() == operation_setting.QuotaDisplayTypeTokens {
 		dQuotaPerUnit := decimal.NewFromFloat(common.QuotaPerUnit)
 		dAmount = dAmount.Div(dQuotaPerUnit)

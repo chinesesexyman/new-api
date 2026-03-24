@@ -29,6 +29,7 @@ import {
   copy,
   getQuotaPerUnit,
 } from '../../helpers';
+import { getCurrencyConfig } from '../../helpers/render';
 import { Modal, Toast, Typography } from '@douyinfe/semi-ui';
 import { useTranslation } from 'react-i18next';
 import { UserContext } from '../../context/User';
@@ -42,6 +43,12 @@ import TopupHistoryModal from './modals/TopupHistoryModal';
 
 const { Text } = Typography;
 const TOPUP_RETURN_URL_STORAGE_KEY = 'new_api_topup_return_url';
+
+const formatDisplayMoney = (amount) => {
+  const numericAmount = Number(amount) || 0;
+  const { symbol, rate } = getCurrencyConfig();
+  return `${symbol}${(numericAmount * rate).toFixed(2)}`;
+};
 
 const persistTopUpReturnUrl = (value) => {
   try {
@@ -762,7 +769,7 @@ const TopUp = () => {
           : '';
       return `${amount}${tokenLabel ? ` ${tokenLabel}` : ''}`;
     }
-    return amount + ' ' + t('元');
+    return formatDisplayMoney(amount);
   };
 
   const getAmount = async (value, paymentMethod = payWay) => {
@@ -850,15 +857,20 @@ const TopUp = () => {
     setTopUpCount(preset.value);
     setSelectedPreset(preset.value);
 
-    if (isCryptoPayment(payWay)) {
+    if (payWay === 'stripe') {
+      await getStripeAmount(preset.value);
+      return;
+    }
+
+    if (isCryptoPayment(payWay) || payWay) {
       await getAmount(preset.value, payWay);
       return;
     }
 
-    // 计算实际支付金额，考虑折扣
+    // 未选择支付方式时，仅做美元基准的本地预估；实际金额以下单前接口返回为准。
     const discount = preset.discount || topupInfo.discount[preset.value] || 1.0;
-    const discountedAmount = preset.value * priceRatio * discount;
-    setAmount(discountedAmount);
+    const estimatedAmount = preset.value * priceRatio * discount;
+    setAmount(estimatedAmount);
   };
 
   // 格式化大数字显示
@@ -873,6 +885,8 @@ const TopUp = () => {
       value: minAmount * multiplier,
     }));
   };
+
+  const showAmountDetails = false;
 
   return (
     <div className='w-full max-w-7xl mx-auto relative min-h-screen lg:min-h-0 mt-[60px] px-2'>
@@ -900,6 +914,7 @@ const TopUp = () => {
         renderQuotaWithAmount={renderQuotaWithAmount}
         amountLoading={amountLoading}
         renderAmount={renderAmount}
+        showAmountDetails={showAmountDetails}
         payWay={payWay}
         payMethods={payMethods}
         amountNumber={amount}
@@ -947,10 +962,6 @@ const TopUp = () => {
                   strong: true,
                   mono: true,
                 },
-              )}
-              {renderCryptoInfoRow(
-                t('参考法币金额'),
-                `${cryptoPaymentData.amount_fiat} ${t('元')}`,
               )}
               {renderCryptoInfoRow(t('收款地址'), cryptoPaymentData.address, {
                 copyValue: cryptoPaymentData.address,
@@ -1012,6 +1023,7 @@ const TopUp = () => {
           setSelectedPreset={setSelectedPreset}
           renderAmount={renderAmount}
           amountLoading={amountLoading}
+          showAmountDetails={showAmountDetails}
           payMethods={payMethods}
           preTopUp={preTopUp}
           paymentLoading={paymentLoading}

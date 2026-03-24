@@ -21,32 +21,17 @@ import React, { useContext, useEffect, useState } from 'react';
 import {
   Button,
   Typography,
-  Input,
-  ScrollList,
-  ScrollItem,
   Card,
   Tag,
   Avatar,
 } from '@douyinfe/semi-ui';
-import {
-  API,
-  showError,
-  copy,
-  showSuccess,
-  getLobeHubIcon,
-} from '../../helpers';
+import { API, showError, getLobeHubIcon } from '../../helpers';
 import { useIsMobile } from '../../hooks/common/useIsMobile';
-import { API_ENDPOINTS } from '../../constants/common.constant';
 import { StatusContext } from '../../context/Status';
 import { useActualTheme } from '../../context/Theme';
 import { marked } from 'marked';
 import { useTranslation } from 'react-i18next';
-import {
-  IconGithubLogo,
-  IconPlay,
-  IconFile,
-  IconCopy,
-} from '@douyinfe/semi-icons';
+import { IconGithubLogo, IconPlay, IconFile } from '@douyinfe/semi-icons';
 import { Link } from 'react-router-dom';
 import NoticeModal from '../../components/layout/NoticeModal';
 
@@ -63,10 +48,6 @@ const Home = () => {
   const [noticeVisible, setNoticeVisible] = useState(false);
   const isMobile = useIsMobile();
   const isDemoSiteMode = statusState?.status?.demo_site_enabled || false;
-  const serverAddress =
-    statusState?.status?.server_address || `${window.location.origin}`;
-  const endpointItems = API_ENDPOINTS.map((e) => ({ value: e }));
-  const [endpointIndex, setEndpointIndex] = useState(0);
   const isChinese = i18n.language.startsWith('zh');
 
   const displayHomePageContent = async () => {
@@ -179,13 +160,6 @@ const Home = () => {
     );
   };
 
-  const handleCopyBaseURL = async () => {
-    const ok = await copy(serverAddress);
-    if (ok) {
-      showSuccess(t('已复制到剪切板'));
-    }
-  };
-
   useEffect(() => {
     const checkNoticeAndShow = async () => {
       const lastCloseDate = localStorage.getItem('notice_close_date');
@@ -212,13 +186,6 @@ const Home = () => {
     loadRecommendedModels().then();
   }, []);
 
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setEndpointIndex((prev) => (prev + 1) % endpointItems.length);
-    }, 3000);
-    return () => clearInterval(timer);
-  }, [endpointItems.length]);
-
   return (
     <div className='w-full overflow-x-hidden'>
       <NoticeModal
@@ -238,48 +205,17 @@ const Home = () => {
               <div className='flex flex-col items-center justify-center text-center max-w-4xl mx-auto'>
                 <div className='flex flex-col items-center justify-center mb-6 md:mb-8'>
                   <h1
-                    className={`text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold text-semi-color-text-0 leading-tight ${isChinese ? 'tracking-wide md:tracking-wider' : ''}`}
+                    className={`text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold text-semi-color-text-0 leading-tight ${isChinese ? 'tracking-wide md:tracking-wider' : ''}`}
                   >
                     <>
-                      {t('统一的')}
+                      {t('连接全球 AI 模型的')}
                       <br />
-                      <span className='shine-text'>{t('大模型接口网关')}</span>
+                      <span className='shine-text'>{t('一站式服务平台')}</span>
                     </>
                   </h1>
                   <p className='text-base md:text-lg lg:text-xl text-semi-color-text-1 mt-4 md:mt-6 max-w-xl'>
-                    {t('更好的价格，更好的稳定性，只需要将模型基址替换为：')}
+                    {t('一站式 API 接入， 覆盖 OpenAI、Anthropic、Google 等300 + 顶尖 AI 模型。更低成本、更高稳定、更快响应。')}
                   </p>
-                  {/* BASE URL 与端点选择 */}
-                  <div className='flex flex-col md:flex-row items-center justify-center gap-4 w-full mt-4 md:mt-6 max-w-md'>
-                    <Input
-                      readonly
-                      value={serverAddress}
-                      className='flex-1 !rounded-full'
-                      size={isMobile ? 'default' : 'large'}
-                      suffix={
-                        <div className='flex items-center gap-2'>
-                          <ScrollList
-                            bodyHeight={32}
-                            style={{ border: 'unset', boxShadow: 'unset' }}
-                          >
-                            <ScrollItem
-                              mode='wheel'
-                              cycled={true}
-                              list={endpointItems}
-                              selectedIndex={endpointIndex}
-                              onSelect={({ index }) => setEndpointIndex(index)}
-                            />
-                          </ScrollList>
-                          <Button
-                            type='primary'
-                            onClick={handleCopyBaseURL}
-                            icon={<IconCopy />}
-                            className='!rounded-full'
-                          />
-                        </div>
-                      }
-                    />
-                  </div>
                 </div>
 
                 {/* 操作按钮 */}
@@ -292,7 +228,7 @@ const Home = () => {
                       className='!rounded-3xl px-8 py-2'
                       icon={<IconPlay />}
                     >
-                      {t('获取密钥')}
+                      {t('获取API Key')}
                     </Button>
                   </Link>
                   {isDemoSiteMode && statusState?.status?.version ? (
@@ -316,7 +252,7 @@ const Home = () => {
                         className='flex items-center !rounded-3xl px-6 py-2'
                         icon={<IconFile />}
                       >
-                        {t('文档')}
+                        {t('API文档')}
                       </Button>
                     </Link>
                   )}
@@ -409,7 +345,7 @@ const Home = () => {
                       type='tertiary'
                       className='text-lg md:text-xl lg:text-2xl font-light'
                     >
-                      {t('支持众多的大模型供应商')}
+                      {t('支持模型')}
                     </Text>
                   </div>
                   <div className='flex flex-wrap items-center justify-center gap-3 sm:gap-4 md:gap-6 lg:gap-8 max-w-5xl mx-auto px-4'>

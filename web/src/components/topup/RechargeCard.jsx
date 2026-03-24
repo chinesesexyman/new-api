@@ -72,6 +72,7 @@ const RechargeCard = ({
   setSelectedPreset,
   renderAmount,
   amountLoading,
+  showAmountDetails = true,
   payMethods,
   preTopUp,
   paymentLoading,
@@ -264,26 +265,28 @@ const RechargeCard = ({
                         value ? parseInt(value.replace(/[^\d]/g, '')) : 0
                       }
                       extraText={
-                        <Skeleton
-                          loading={showAmountSkeleton}
-                          active
-                          placeholder={
-                            <Skeleton.Title
-                              style={{
-                                width: 120,
-                                height: 20,
-                                borderRadius: 6,
-                              }}
-                            />
-                          }
-                        >
-                          <Text type='secondary' className='text-red-600'>
-                            {t('实付金额：')}
-                            <span style={{ color: 'red' }}>
-                              {renderAmount()}
-                            </span>
-                          </Text>
-                        </Skeleton>
+                        showAmountDetails ? (
+                          <Skeleton
+                            loading={showAmountSkeleton}
+                            active
+                            placeholder={
+                              <Skeleton.Title
+                                style={{
+                                  width: 120,
+                                  height: 20,
+                                  borderRadius: 6,
+                                }}
+                              />
+                            }
+                          >
+                            <Text type='secondary' className='text-red-600'>
+                              {t('实付金额：')}
+                              <span style={{ color: 'red' }}>
+                                {renderAmount()}
+                              </span>
+                            </Text>
+                          </Skeleton>
+                        ) : null
                       }
                       style={{ width: '100%' }}
                     />
@@ -396,7 +399,7 @@ const RechargeCard = ({
                       const actualPay = discountedPrice;
                       const save = originalPrice - discountedPrice;
 
-                      // 根据当前货币类型换算显示金额和数量
+                      // 充值金额统一以 USD 为基准，仅在展示层按当前货币换算
                       const { symbol, rate, type } = getCurrencyConfig();
                       const statusStr = localStorage.getItem('status');
                       let usdRate = 7; // 默认CNY汇率
@@ -411,18 +414,14 @@ const RechargeCard = ({
                       let displayActualPay = actualPay;
                       let displaySave = save;
 
-                      if (type === 'USD') {
-                        // 数量保持USD，价格从CNY转USD
-                        displayActualPay = actualPay / usdRate;
-                        displaySave = save / usdRate;
-                      } else if (type === 'CNY') {
-                        // 数量转CNY，价格已是CNY
+                      if (type === 'CNY') {
                         displayValue = preset.value * usdRate;
+                        displayActualPay = actualPay * usdRate;
+                        displaySave = save * usdRate;
                       } else if (type === 'CUSTOM') {
-                        // 数量和价格都转自定义货币
                         displayValue = preset.value * rate;
-                        displayActualPay = (actualPay / usdRate) * rate;
-                        displaySave = (save / usdRate) * rate;
+                        displayActualPay = actualPay * rate;
+                        displaySave = save * rate;
                       }
 
                       return (

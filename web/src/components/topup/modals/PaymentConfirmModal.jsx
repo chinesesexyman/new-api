@@ -21,8 +21,15 @@ import React from 'react';
 import { Modal, Typography, Card, Skeleton } from '@douyinfe/semi-ui';
 import { SiAlipay, SiWechat, SiStripe } from 'react-icons/si';
 import { CreditCard } from 'lucide-react';
+import { getCurrencyConfig } from '../../../helpers/render';
 
 const { Text } = Typography;
+
+const formatDisplayMoney = (amount) => {
+  const numericAmount = Number(amount) || 0;
+  const { symbol, rate } = getCurrencyConfig();
+  return `${symbol}${(numericAmount * rate).toFixed(2)}`;
+};
 
 const PaymentConfirmModal = ({
   t,
@@ -34,6 +41,7 @@ const PaymentConfirmModal = ({
   renderQuotaWithAmount,
   amountLoading,
   renderAmount,
+  showAmountDetails = true,
   payWay,
   payMethods,
   // 新增：用于显示折扣明细
@@ -71,33 +79,35 @@ const PaymentConfirmModal = ({
                 {renderQuotaWithAmount(topUpCount)}
               </Text>
             </div>
-            <div className='flex justify-between items-center'>
-              <Text strong className='text-slate-700 dark:text-slate-200'>
-                {t('实付金额')}：
-              </Text>
-              {amountLoading ? (
-                <Skeleton.Title style={{ width: '60px', height: '16px' }} />
-              ) : (
-                <div className='flex items-baseline space-x-2'>
-                  <Text strong className='font-bold' style={{ color: 'red' }}>
-                    {renderAmount()}
-                  </Text>
-                  {hasDiscount && (
-                    <Text size='small' className='text-rose-500'>
-                      {Math.round(discountRate * 100)}%
+            {showAmountDetails && (
+              <div className='flex justify-between items-center'>
+                <Text strong className='text-slate-700 dark:text-slate-200'>
+                  {t('实付金额')}：
+                </Text>
+                {amountLoading ? (
+                  <Skeleton.Title style={{ width: '60px', height: '16px' }} />
+                ) : (
+                  <div className='flex items-baseline space-x-2'>
+                    <Text strong className='font-bold' style={{ color: 'red' }}>
+                      {renderAmount()}
                     </Text>
-                  )}
-                </div>
-              )}
-            </div>
-            {hasDiscount && !amountLoading && (
+                    {hasDiscount && (
+                      <Text size='small' className='text-rose-500'>
+                        {Math.round(discountRate * 100)}%
+                      </Text>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+            {showAmountDetails && hasDiscount && !amountLoading && (
               <>
                 <div className='flex justify-between items-center'>
                   <Text className='text-slate-500 dark:text-slate-400'>
                     {t('原价')}：
                   </Text>
                   <Text delete className='text-slate-500 dark:text-slate-400'>
-                    {`${originalAmount.toFixed(2)} ${t('元')}`}
+                    {formatDisplayMoney(originalAmount)}
                   </Text>
                 </div>
                 <div className='flex justify-between items-center'>
@@ -105,7 +115,7 @@ const PaymentConfirmModal = ({
                     {t('优惠')}：
                   </Text>
                   <Text className='text-emerald-600 dark:text-emerald-400'>
-                    {`- ${discountAmount.toFixed(2)} ${t('元')}`}
+                    {`- ${formatDisplayMoney(discountAmount)}`}
                   </Text>
                 </div>
               </>

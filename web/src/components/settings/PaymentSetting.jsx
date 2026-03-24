@@ -33,7 +33,7 @@ const PaymentSetting = () => {
     PayAddress: '',
     EpayId: '',
     EpayKey: '',
-    Price: 7.3,
+    Price: 1,
     MinTopUp: 1,
     TopupGroupRatio: '',
     CustomCallbackAddress: '',
@@ -52,7 +52,7 @@ const PaymentSetting = () => {
     StripeApiSecret: '',
     StripeWebhookSecret: '',
     StripePriceId: '',
-    StripeUnitPrice: 8.0,
+    StripeUnitPrice: 1.0,
     StripeMinTopUp: 1,
     StripePromotionCodesEnabled: false,
   });

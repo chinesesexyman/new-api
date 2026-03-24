@@ -35,6 +35,7 @@ import {
 import { Coins } from 'lucide-react';
 import { IconSearch } from '@douyinfe/semi-icons';
 import { API, timestamp2string } from '../../../helpers';
+import { convertUSDToCurrency } from '../../../helpers/render';
 import { isAdmin } from '../../../helpers/utils';
 import { useIsMobile } from '../../../hooks/common/useIsMobile';
 
@@ -202,7 +203,9 @@ const TopupHistoryModal = ({ visible, onCancel, onRepay, t }) => {
         title: t('支付金额'),
         dataIndex: 'money',
         key: 'money',
-        render: (money) => <Text type='danger'>¥{money.toFixed(2)}</Text>,
+        render: (money) => (
+          <Text type='danger'>{convertUSDToCurrency(Number(money) || 0)}</Text>
+        ),
       },
       {
         title: t('状态'),
