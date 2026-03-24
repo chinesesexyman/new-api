@@ -22,23 +22,46 @@ import { Button, Dropdown } from '@douyinfe/semi-ui';
 import { Languages } from 'lucide-react';
 import { normalizeAppLanguage } from '../../../i18n/i18n';
 
-const LanguageSelector = ({ currentLang, onLanguageChange, t }) => {
+const LanguageSelector = ({
+  currentLang,
+  onLanguageChange,
+  t,
+  actualTheme,
+}) => {
   const normalizedCurrentLang = normalizeAppLanguage(currentLang);
+  const menuClassName =
+    actualTheme === 'dark'
+      ? '!bg-[#111827] !border-[#374151] !shadow-lg !rounded-lg'
+      : '!bg-white !border-[#e5e7eb] !shadow-lg !rounded-lg';
+  const itemBaseClass =
+    actualTheme === 'dark'
+      ? '!px-3 !py-1.5 !text-sm !text-slate-200'
+      : '!px-3 !py-1.5 !text-sm !text-semi-color-text-0';
+  const activeItemClass =
+    actualTheme === 'dark'
+      ? '!bg-[#6d28d9] !text-white !font-semibold'
+      : '!bg-[#ede9fe] !text-[#5b21b6] !font-semibold';
+  const hoverItemClass =
+    actualTheme === 'dark' ? 'hover:!bg-[#1f2937]' : 'hover:!bg-[#f3f4f6]';
+  const triggerClassName =
+    actualTheme === 'dark'
+      ? '!p-1.5 !text-current !rounded-full !bg-[#1e293b] hover:!bg-[#2b3b53] focus:!bg-[#2b3b53]'
+      : '!p-1.5 !text-current !rounded-full !bg-[#f3f4f6] hover:!bg-[#e5e7eb] focus:!bg-[#e5e7eb]';
 
   return (
     <Dropdown
       position='bottomRight'
       render={
-        <Dropdown.Menu className='!bg-semi-color-bg-overlay !border-semi-color-border !shadow-lg !rounded-lg dark:!bg-gray-700 dark:!border-gray-600'>
+        <Dropdown.Menu className={menuClassName}>
           <Dropdown.Item
             onClick={() => onLanguageChange('en')}
-            className={`!px-3 !py-1.5 !text-sm !text-semi-color-text-0 dark:!text-gray-200 ${normalizedCurrentLang === 'en' ? '!bg-semi-color-primary-light-default dark:!bg-blue-600 !font-semibold' : 'hover:!bg-semi-color-fill-1 dark:hover:!bg-gray-600'}`}
+            className={`${itemBaseClass} ${normalizedCurrentLang === 'en' ? activeItemClass : hoverItemClass}`}
           >
             English
           </Dropdown.Item>
           <Dropdown.Item
             onClick={() => onLanguageChange('zh-CN')}
-            className={`!px-3 !py-1.5 !text-sm !text-semi-color-text-0 dark:!text-gray-200 ${normalizedCurrentLang === 'zh-CN' ? '!bg-semi-color-primary-light-default dark:!bg-blue-600 !font-semibold' : 'hover:!bg-semi-color-fill-1 dark:hover:!bg-gray-600'}`}
+            className={`${itemBaseClass} ${normalizedCurrentLang === 'zh-CN' ? activeItemClass : hoverItemClass}`}
           >
             简体中文
           </Dropdown.Item>
@@ -50,7 +73,7 @@ const LanguageSelector = ({ currentLang, onLanguageChange, t }) => {
         aria-label={t('common.changeLanguage')}
         theme='borderless'
         type='tertiary'
-        className='!p-1.5 !text-current focus:!bg-semi-color-fill-1 dark:focus:!bg-gray-700 !rounded-full !bg-semi-color-fill-0 dark:!bg-semi-color-fill-1 hover:!bg-semi-color-fill-1 dark:hover:!bg-semi-color-fill-2'
+        className={triggerClassName}
       />
     </Dropdown>
   );

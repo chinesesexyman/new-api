@@ -34,12 +34,16 @@ export const useActualTheme = () => useContext(ActualThemeContext);
 const SetThemeContext = createContext(null);
 export const useSetTheme = () => useContext(SetThemeContext);
 
-// 检测系统主题偏好
-const getSystemTheme = () => {
-  if (typeof window !== 'undefined' && window.matchMedia) {
-    return window.matchMedia('(prefers-color-scheme: dark)').matches
-      ? 'dark'
-      : 'light';
+const normalizeThemeMode = (themeValue) => {
+  if (themeValue === 'dark' || themeValue === 'light') {
+    return themeValue;
+  }
+  if (themeValue === 'auto') {
+    if (typeof window !== 'undefined' && window.matchMedia) {
+      return window.matchMedia('(prefers-color-scheme: dark)').matches
+        ? 'dark'
+        : 'light';
+    }
   }
   return 'light';
 };
@@ -47,33 +51,12 @@ const getSystemTheme = () => {
 export const ThemeProvider = ({ children }) => {
   const [theme, _setTheme] = useState(() => {
     try {
-      return localStorage.getItem('theme-mode') || 'auto';
+      return normalizeThemeMode(localStorage.getItem('theme-mode'));
     } catch {
-      return 'auto';
+      return 'light';
     }
   });
-
-  const [systemTheme, setSystemTheme] = useState(getSystemTheme());
-
-  // 计算实际应用的主题
-  const actualTheme = theme === 'auto' ? systemTheme : theme;
-
-  // 监听系统主题变化
-  useEffect(() => {
-    if (typeof window !== 'undefined' && window.matchMedia) {
-      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-
-      const handleSystemThemeChange = (e) => {
-        setSystemTheme(e.matches ? 'dark' : 'light');
-      };
-
-      mediaQuery.addEventListener('change', handleSystemThemeChange);
-
-      return () => {
-        mediaQuery.removeEventListener('change', handleSystemThemeChange);
-      };
-    }
-  }, []);
+  const actualTheme = theme;
 
   // 应用主题到DOM
   useEffect(() => {
@@ -87,17 +70,21 @@ export const ThemeProvider = ({ children }) => {
     }
   }, [actualTheme]);
 
+  useEffect(() => {
+    try {
+      localStorage.setItem('theme-mode', theme);
+    } catch {
+      // Ignore storage errors
+    }
+  }, [theme]);
+
   const setTheme = useCallback((newTheme) => {
     let themeValue;
 
     if (typeof newTheme === 'boolean') {
-      // 向后兼容原有的 boolean 参数
       themeValue = newTheme ? 'dark' : 'light';
-    } else if (typeof newTheme === 'string') {
-      // 新的字符串参数支持 'light', 'dark', 'auto'
-      themeValue = newTheme;
     } else {
-      themeValue = 'auto';
+      themeValue = normalizeThemeMode(newTheme);
     }
 
     _setTheme(themeValue);

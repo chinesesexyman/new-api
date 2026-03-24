@@ -33,6 +33,7 @@ export default function SettingsCreditLimit(props) {
   const [loading, setLoading] = useState(false);
   const [inputs, setInputs] = useState({
     QuotaForNewUser: '',
+    InternalRegisterQuota: '',
     PreConsumedQuota: '',
     QuotaForInviter: '',
     QuotaForInvitee: '',
@@ -109,6 +110,22 @@ export default function SettingsCreditLimit(props) {
                     setInputs({
                       ...inputs,
                       QuotaForNewUser: String(value),
+                    })
+                  }
+                />
+              </Col>
+              <Col xs={24} sm={12} md={8} lg={8} xl={8}>
+                <Form.InputNumber
+                  label={t('内部注册赠送额度')}
+                  field={'InternalRegisterQuota'}
+                  step={1}
+                  min={0}
+                  suffix={'Token'}
+                  placeholder={''}
+                  onChange={(value) =>
+                    setInputs({
+                      ...inputs,
+                      InternalRegisterQuota: String(value),
                     })
                   }
                 />

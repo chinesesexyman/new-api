@@ -67,9 +67,10 @@ const HeaderBar = ({ onMobileMenuToggle, drawerOpen }) => {
 
   return (
     <header
-      className='text-semi-color-text-0 sticky top-0 z-50 transition-colors duration-300 !bg-white dark:!bg-[#0f172a]'
+      className='sticky top-0 z-50 transition-colors duration-300'
       style={{
         backgroundColor: actualTheme === 'dark' ? '#0f172a' : '#ffffff',
+        color: actualTheme === 'dark' ? '#e2e8f0' : '#111827',
         opacity: 1,
       }}
     >
@@ -91,6 +92,7 @@ const HeaderBar = ({ onMobileMenuToggle, drawerOpen }) => {
               collapsed={collapsed}
               onToggle={handleMobileMenuToggle}
               t={t}
+              actualTheme={actualTheme}
             />
 
             <HeaderLogo
@@ -103,6 +105,7 @@ const HeaderBar = ({ onMobileMenuToggle, drawerOpen }) => {
               isSelfUseMode={isSelfUseMode}
               isDemoSiteMode={isDemoSiteMode}
               t={t}
+              actualTheme={actualTheme}
             />
           </div>
 
@@ -112,6 +115,7 @@ const HeaderBar = ({ onMobileMenuToggle, drawerOpen }) => {
             isLoading={isLoading}
             userState={userState}
             pricingRequireAuth={pricingRequireAuth}
+            actualTheme={actualTheme}
           />
 
           <ActionButtons
@@ -129,6 +133,7 @@ const HeaderBar = ({ onMobileMenuToggle, drawerOpen }) => {
             logout={logout}
             navigate={navigate}
             t={t}
+            actualTheme={actualTheme}
           />
         </div>
       </div>

@@ -38,6 +38,7 @@ const UserArea = ({
   logout,
   navigate,
   t,
+  actualTheme,
 }) => {
   const dropdownRef = useRef(null);
   if (isLoading) {
@@ -148,13 +149,17 @@ const UserArea = ({
       'flex items-center justify-center !py-[10px] !px-1.5 !w-[78px] md:!w-[88px]';
 
     const loginButtonSpecificStyling =
-      '!bg-semi-color-fill-0 dark:!bg-semi-color-fill-1 hover:!bg-semi-color-fill-1 dark:hover:!bg-gray-700 transition-colors';
+      actualTheme === 'dark'
+        ? '!bg-[#1e293b] hover:!bg-[#2b3b53] transition-colors'
+        : '!bg-[#f3f4f6] hover:!bg-[#e5e7eb] transition-colors';
     let loginButtonClasses = `${commonSizingAndLayoutClass} ${loginButtonSpecificStyling}`;
 
     let registerButtonClasses = `${commonSizingAndLayoutClass} !bg-[#6d28d9] hover:!bg-[#5b21b6] dark:!bg-[#7c3aed] dark:hover:!bg-[#6d28d9] transition-colors`;
 
     const loginButtonTextSpanClass =
-      '!text-xs !text-semi-color-text-1 dark:!text-gray-300 !p-1.5';
+      actualTheme === 'dark'
+        ? '!text-xs !text-slate-200 !p-1.5'
+        : '!text-xs !text-semi-color-text-1 !p-1.5';
     const registerButtonTextSpanClass = '!text-xs !text-white !p-1.5';
 
     if (showRegisterButton) {

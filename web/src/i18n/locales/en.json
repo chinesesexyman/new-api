@@ -3201,6 +3201,8 @@
     "集中浏览平台内可用的 AI 模型，按供应商快速筛选，并用统一视图比较不同模型的能力与价格。": "Browse the AI models available on the platform, filter quickly by provider, and compare capabilities and pricing in one unified view.",
     "按模型名称或供应商搜索": "Search by model name or provider",
     "可用端点": "Available Endpoints",
-    "标准": "Standard"
+    "标准": "Standard",
+    "内部注册赠送额度": "Internal registration bonus quota",
+    "文档": "Documentation"
   }
 }

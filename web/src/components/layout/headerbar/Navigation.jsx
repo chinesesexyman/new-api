@@ -27,14 +27,18 @@ const Navigation = ({
   isLoading,
   userState,
   pricingRequireAuth,
+  actualTheme,
 }) => {
   const renderNavLinks = () => {
     const baseClasses =
       'flex-shrink-0 flex items-center gap-1 font-semibold rounded-md transition-all duration-200 ease-in-out';
-    const hoverClasses = 'hover:text-[#6d28d9] dark:hover:text-[#c4b5fd]';
+    const hoverClasses =
+      actualTheme === 'dark' ? 'hover:text-[#c4b5fd]' : 'hover:text-[#6d28d9]';
     const spacingClasses = isMobile ? 'p-1' : 'p-2';
-    const defaultTextClasses = 'text-semi-color-text-1 dark:text-slate-300';
-    const activeTextClasses = '!text-[#6d28d9] dark:!text-[#c4b5fd]';
+    const defaultTextClasses =
+      actualTheme === 'dark' ? 'text-slate-300' : 'text-semi-color-text-1';
+    const activeTextClasses =
+      actualTheme === 'dark' ? '!text-[#c4b5fd]' : '!text-[#6d28d9]';
     const commonLinkClasses = `${baseClasses} ${spacingClasses} ${hoverClasses} ${defaultTextClasses}`;
 
     return mainNavLinks.map((link) => {

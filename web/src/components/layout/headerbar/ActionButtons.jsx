@@ -39,23 +39,30 @@ const ActionButtons = ({
   logout,
   navigate,
   t,
+  actualTheme,
 }) => {
   return (
     <div className='flex items-center gap-2 md:gap-3'>
-      <NewYearButton isNewYear={isNewYear} />
+      <NewYearButton isNewYear={isNewYear} actualTheme={actualTheme} />
 
       <NotificationButton
         unreadCount={unreadCount}
         onNoticeOpen={onNoticeOpen}
         t={t}
+        actualTheme={actualTheme}
       />
 
-      <ThemeToggle onThemeToggle={onThemeToggle} t={t} />
+      <ThemeToggle
+        onThemeToggle={onThemeToggle}
+        t={t}
+        actualTheme={actualTheme}
+      />
 
       <LanguageSelector
         currentLang={currentLang}
         onLanguageChange={onLanguageChange}
         t={t}
+        actualTheme={actualTheme}
       />
 
       <UserArea
@@ -66,6 +73,7 @@ const ActionButtons = ({
         logout={logout}
         navigate={navigate}
         t={t}
+        actualTheme={actualTheme}
       />
     </div>
   );

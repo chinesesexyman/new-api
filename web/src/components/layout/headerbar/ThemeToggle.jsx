@@ -20,10 +20,7 @@ For commercial licensing, please contact support@quantumnous.com
 import React, { useMemo } from 'react';
 import { Button } from '@douyinfe/semi-ui';
 import { Sun, Moon } from 'lucide-react';
-import { useActualTheme } from '../../../context/Theme';
-
-const ThemeToggle = ({ onThemeToggle, t }) => {
-  const actualTheme = useActualTheme();
+const ThemeToggle = ({ onThemeToggle, t, actualTheme }) => {
   const isDark = actualTheme === 'dark';
 
   const nextTheme = isDark ? 'light' : 'dark';
@@ -39,7 +36,11 @@ const ThemeToggle = ({ onThemeToggle, t }) => {
       aria-label={t('切换主题')}
       theme='borderless'
       type='tertiary'
-      className='!p-1.5 !text-current focus:!bg-semi-color-fill-1 !rounded-full !bg-semi-color-fill-0 hover:!bg-semi-color-fill-1'
+      className={`!p-1.5 !rounded-full !text-current transition-colors ${
+        actualTheme === 'dark'
+          ? '!bg-[#1e293b] hover:!bg-[#2b3b53] focus:!bg-[#2b3b53]'
+          : '!bg-[#f3f4f6] hover:!bg-[#e5e7eb] focus:!bg-[#e5e7eb]'
+      }`}
       onClick={() => onThemeToggle(nextTheme)}
     />
   );

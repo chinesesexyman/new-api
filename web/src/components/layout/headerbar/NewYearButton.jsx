@@ -21,7 +21,7 @@ import React from 'react';
 import { Button, Dropdown } from '@douyinfe/semi-ui';
 import fireworks from 'react-fireworks';
 
-const NewYearButton = ({ isNewYear }) => {
+const NewYearButton = ({ isNewYear, actualTheme }) => {
   if (!isNewYear) {
     return null;
   }
@@ -38,10 +38,20 @@ const NewYearButton = ({ isNewYear }) => {
     <Dropdown
       position='bottomRight'
       render={
-        <Dropdown.Menu className='!bg-semi-color-bg-overlay !border-semi-color-border !shadow-lg !rounded-lg dark:!bg-gray-700 dark:!border-gray-600'>
+        <Dropdown.Menu
+          className={`!shadow-lg !rounded-lg ${
+            actualTheme === 'dark'
+              ? '!bg-[#111827] !border-[#374151]'
+              : '!bg-white !border-[#e5e7eb]'
+          }`}
+        >
           <Dropdown.Item
             onClick={handleNewYearClick}
-            className='!text-semi-color-text-0 hover:!bg-semi-color-fill-1 dark:!text-gray-200 dark:hover:!bg-gray-600'
+            className={
+              actualTheme === 'dark'
+                ? '!text-slate-200 hover:!bg-[#1f2937]'
+                : '!text-slate-900 hover:!bg-[#f3f4f6]'
+            }
           >
             Happy New Year!!! 🎉
           </Dropdown.Item>
@@ -53,7 +63,11 @@ const NewYearButton = ({ isNewYear }) => {
         type='tertiary'
         icon={<span className='text-xl'>🎉</span>}
         aria-label='New Year'
-        className='!p-1.5 !text-current focus:!bg-semi-color-fill-1 dark:focus:!bg-gray-700 rounded-full'
+        className={`!p-1.5 !text-current rounded-full transition-colors ${
+          actualTheme === 'dark'
+            ? 'hover:!bg-[#1e293b] focus:!bg-[#1e293b]'
+            : 'hover:!bg-[#f3f4f6] focus:!bg-[#f3f4f6]'
+        }`}
       />
     </Dropdown>
   );

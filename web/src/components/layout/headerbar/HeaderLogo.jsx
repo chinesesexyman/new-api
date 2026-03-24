@@ -32,6 +32,7 @@ const HeaderLogo = ({
   isSelfUseMode,
   isDemoSiteMode,
   t,
+  actualTheme,
 }) => {
   if (isMobile && isConsoleRoute) {
     return null;
@@ -57,7 +58,9 @@ const HeaderLogo = ({
           >
             <Typography.Title
               heading={4}
-              className='!text-lg !font-semibold !mb-0'
+              className={`!text-lg !font-semibold !mb-0 ${
+                actualTheme === 'dark' ? '!text-slate-100' : '!text-slate-900'
+              }`}
             >
               {systemName}
             </Typography.Title>
