@@ -255,7 +255,7 @@ const Home = () => {
                 </div>
 
                 {recommendedModels.length > 0 && (
-                  <div className='mt-10 md:mt-12 w-full max-w-6xl'>
+                  <div className='mt-[72px] md:mt-[88px] w-full max-w-6xl'>
                     <div className='flex items-center justify-between gap-4 mb-4 px-1'>
                       <div className='text-left'>
                         <Text className='text-lg md:text-xl font-semibold text-semi-color-text-0'>
@@ -335,25 +335,30 @@ const Home = () => {
                   <div className='flex items-center mb-6 md:mb-8 justify-center'>
                     <Text
                       type='tertiary'
-                      className='text-lg md:text-xl lg:text-2xl font-light'
+                      className='text-xs md:text-sm lg:text-base font-medium tracking-[0.08em]'
                     >
                       {t('支持模型')}
                     </Text>
                   </div>
-                  <div className='flex flex-wrap items-center justify-center gap-3 sm:gap-4 md:gap-6 lg:gap-8 max-w-5xl mx-auto px-4'>
+                  <div className='flex flex-wrap items-center justify-center gap-2.5 sm:gap-3 md:gap-4 lg:gap-5 max-w-5xl mx-auto px-4'>
                     {homePageVendors.map((vendor) => (
                       <div
                         key={vendor.id}
-                        className='w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 flex items-center justify-center'
+                        className='w-[74px] sm:w-[82px] md:w-[92px] min-h-[78px] md:min-h-[86px] rounded-2xl border border-[#d9c8ff] dark:border-[#4c1d95] bg-white/72 dark:bg-[#140b29]/78 shadow-[0_10px_24px_rgba(109,40,217,0.08)] dark:shadow-[0_12px_30px_rgba(15,23,42,0.36)] px-2 py-2.5 flex flex-col items-center justify-center gap-1.5'
                         title={vendor.name}
                       >
-                        {vendor.icon ? (
-                          getLobeHubIcon(vendor.icon, 40)
-                        ) : (
-                          <Typography.Text className='!text-sm sm:!text-base md:!text-lg font-semibold'>
-                            {vendor.name?.charAt(0)?.toUpperCase() || '?'}
-                          </Typography.Text>
-                        )}
+                        <div className='w-7 h-7 sm:w-8 sm:h-8 md:w-10 md:h-10 flex items-center justify-center'>
+                          {vendor.icon ? (
+                            getLobeHubIcon(vendor.icon, 34)
+                          ) : (
+                            <Typography.Text className='!text-xs sm:!text-sm md:!text-base font-semibold'>
+                              {vendor.name?.charAt(0)?.toUpperCase() || '?'}
+                            </Typography.Text>
+                          )}
+                        </div>
+                        <Typography.Text className='!text-[10px] sm:!text-[11px] !leading-4 !text-semi-color-text-1 dark:!text-slate-300 text-center break-words'>
+                          {vendor.name}
+                        </Typography.Text>
                       </div>
                     ))}
                   </div>

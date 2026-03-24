@@ -145,7 +145,7 @@ const UserArea = ({
     const showRegisterButton = !isSelfUseMode;
 
     const commonSizingAndLayoutClass =
-      'flex items-center justify-center !py-[10px] !px-1.5';
+      'flex items-center justify-center !py-[10px] !px-1.5 !w-[78px] md:!w-[88px]';
 
     const loginButtonSpecificStyling =
       '!bg-semi-color-fill-0 dark:!bg-semi-color-fill-1 hover:!bg-semi-color-fill-1 dark:hover:!bg-gray-700 transition-colors';

@@ -625,8 +625,8 @@
     "关闭弹窗，已停止批量测试": "Dialog closed, batch testing stopped",
     "关闭提示": "Close notice",
     "其他": "Other",
-    "其他注册选项": "Other registration options",
-    "其他登录选项": "Other login options",
+    "其他注册选项": "Other Sign Up Options",
+    "其他登录选项": "Other Sign In Options",
     "其他设置": "Other Settings",
     "其他详情": "Other details",
     "内存 阈值 (%)": "Memory Threshold (%)",
@@ -996,7 +996,7 @@
     "多密钥渠道操作项目组": "Multi-key channel operation project group",
     "多密钥管理": "Multi-key management",
     "多种充值方式，安全便捷": "Multiple recharge methods, safe and convenient",
-    "一站式服务平台": "In One Service Platform",
+    "一站式服务平台": "All-in-One Platform",
     "天": "day",
     "天前": "days ago",
     "失败": "Failed",
@@ -3195,6 +3195,12 @@
     "推荐模型": "Recommended Models",
     "查看全部": "View All",
     "精选模型": "Featured Model",
-    "推荐": "Recommended"
+    "推荐": "Recommended",
+    "探索模型前沿": "Explore the Frontier",
+    "优选模型": "Featured Models",
+    "集中浏览平台内可用的 AI 模型，按供应商快速筛选，并用统一视图比较不同模型的能力与价格。": "Browse the AI models available on the platform, filter quickly by provider, and compare capabilities and pricing in one unified view.",
+    "按模型名称或供应商搜索": "Search by model name or provider",
+    "可用端点": "Available Endpoints",
+    "标准": "Standard"
   }
 }

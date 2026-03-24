@@ -20,6 +20,7 @@ For commercial licensing, please contact support@quantumnous.com
 import React, { useEffect, useState, useMemo, useContext } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Typography } from '@douyinfe/semi-ui';
+import { Link } from 'react-router-dom';
 import { getFooterHTML, getLogo, getSystemName } from '../../helpers';
 import { StatusContext } from '../../context/Status';
 
@@ -30,6 +31,8 @@ const FooterBar = () => {
   const logo = getLogo();
   const [statusState] = useContext(StatusContext);
   const isDemoSiteMode = statusState?.status?.demo_site_enabled || false;
+  const hasUserAgreement = statusState?.status?.user_agreement_enabled || false;
+  const hasPrivacyPolicy = statusState?.status?.privacy_policy_enabled || false;
 
   const loadFooter = () => {
     let footer_html = localStorage.getItem('footer_html');
@@ -188,16 +191,50 @@ const FooterBar = () => {
           </div>
         )}
 
-        <div className='flex flex-col md:flex-row items-center justify-between w-full max-w-[1110px] gap-6'>
-          <div className='flex flex-wrap items-center gap-2'>
+        <div className='flex flex-col md:flex-row items-center justify-center w-full max-w-[1110px] gap-6'>
+          <div className='flex flex-wrap items-center justify-center gap-2 text-center'>
             <Typography.Text className='text-sm !text-semi-color-text-1'>
               © {currentYear} {systemName}. {t('版权所有')}
             </Typography.Text>
+            {hasUserAgreement && (
+              <>
+                <Typography.Text className='text-sm !text-semi-color-text-2'>
+                  |
+                </Typography.Text>
+                <Link
+                  to='/user-agreement'
+                  className='text-sm !text-[#6d28d9] hover:!text-[#5b21b6] dark:!text-[#c4b5fd] dark:hover:!text-[#ddd6fe] transition-colors'
+                >
+                  {t('用户协议')}
+                </Link>
+              </>
+            )}
+            {hasPrivacyPolicy && (
+              <>
+                <Typography.Text className='text-sm !text-semi-color-text-2'>
+                  |
+                </Typography.Text>
+                <Link
+                  to='/privacy-policy'
+                  className='text-sm !text-[#6d28d9] hover:!text-[#5b21b6] dark:!text-[#c4b5fd] dark:hover:!text-[#ddd6fe] transition-colors'
+                >
+                  {t('隐私政策')}
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </footer>
     ),
-    [logo, systemName, t, currentYear, isDemoSiteMode],
+    [
+      logo,
+      systemName,
+      t,
+      currentYear,
+      isDemoSiteMode,
+      hasUserAgreement,
+      hasPrivacyPolicy,
+    ],
   );
 
   useEffect(() => {
