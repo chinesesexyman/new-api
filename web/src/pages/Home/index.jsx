@@ -272,34 +272,34 @@ const Home = () => {
                         </Button>
                       </Link>
                     </div>
-                    <div className='flex gap-4 overflow-x-auto scrollbar-hide px-1 pb-2 snap-x snap-mandatory'>
+                    <div className='flex gap-3 overflow-x-auto scrollbar-hide px-1 pb-2 snap-x snap-mandatory'>
                       {recommendedModels.map((model) => (
                         <Link
                           key={model.model_name}
                           to='/pricing'
-                          className='block shrink-0 w-[88vw] max-w-[360px] sm:w-[360px] snap-start'
+                          className='block shrink-0 w-[86vw] max-w-[336px] sm:w-[336px] snap-start'
                         >
                           <Card
                             className='!rounded-3xl border-0 shadow-sm hover:shadow-lg transition-all duration-200 h-full text-left backdrop-blur-sm'
-                            bodyStyle={{ padding: 20, height: '100%' }}
+                            bodyStyle={{ padding: '10px 16px', height: '100%' }}
                           >
-                            <div className='flex flex-col h-full'>
-                              <div className='flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-4'>
-                                <div className='flex items-center gap-3 min-w-0'>
-                                  <div className='w-10 h-10 rounded-2xl bg-white/80 dark:bg-black/20 shadow-sm flex items-center justify-center shrink-0'>
+                            <div className='flex flex-col h-full justify-center min-h-[96px]'>
+                              <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5'>
+                                <div className='flex items-center gap-2.5 min-w-0 flex-1'>
+                                  <div className='w-9 h-9 rounded-2xl bg-white/80 dark:bg-black/20 shadow-sm flex items-center justify-center shrink-0'>
                                     {renderModelIcon(model)}
                                   </div>
-                                  <div className='min-w-0'>
-                                    <div className='text-base font-semibold text-semi-color-text-0 leading-6 h-[48px] line-clamp-2 break-words overflow-hidden'>
+                                  <div className='min-w-0 flex min-h-[52px] flex-1 flex-col justify-center'>
+                                    <div className='text-[15px] font-semibold text-semi-color-text-0 leading-5 h-[40px] line-clamp-2 break-words overflow-hidden'>
                                       {model.model_name}
                                     </div>
-                                    <div className='text-xs text-semi-color-text-2 leading-4 h-[32px] line-clamp-2 break-words overflow-hidden'>
+                                    <div className='flex h-[16px] items-center text-xs text-semi-color-text-2 leading-4 line-clamp-1 break-words overflow-hidden'>
                                       {model.vendor_name || t('精选模型')}
                                     </div>
                                   </div>
                                 </div>
                                 {model.tags ? (
-                                  <div className='flex flex-wrap justify-start sm:justify-end gap-2 shrink-0 max-w-full sm:max-w-[45%]'>
+                                  <div className='flex flex-wrap content-start items-start justify-start sm:justify-end gap-1.5 shrink-0 max-w-full sm:max-w-[36%] min-h-[48px] overflow-hidden py-[1px]'>
                                     {model.tags
                                       .split(',')
                                       .filter(Boolean)
@@ -317,13 +317,6 @@ const Home = () => {
                                   </div>
                                 ) : null}
                               </div>
-                              {model.description ? (
-                                <div className='text-sm text-semi-color-text-1 leading-6 h-[48px] line-clamp-2 break-words overflow-hidden'>
-                                  {model.description}
-                                </div>
-                              ) : (
-                                <div className='h-[48px]' />
-                              )}
                             </div>
                           </Card>
                         </Link>
