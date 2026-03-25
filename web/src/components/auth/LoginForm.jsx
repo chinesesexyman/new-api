@@ -523,7 +523,7 @@ const LoginForm = () => {
             </Title>
           </div>
 
-          <Card className='border-0 !rounded-2xl overflow-hidden !bg-white/95 dark:!bg-[#120a23] shadow-[0_24px_80px_rgba(109,40,217,0.12)] dark:shadow-[0_24px_80px_rgba(15,23,42,0.45)]'>
+          <Card className='border-0 !rounded-2xl overflow-hidden !bg-white/95 shadow-[0_24px_80px_rgba(109,40,217,0.12)] dark:shadow-[0_24px_80px_rgba(15,23,42,0.45)]'>
             <div className='flex justify-center pt-6 pb-2'>
               <Title
                 heading={3}
