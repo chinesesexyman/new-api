@@ -256,7 +256,7 @@ const Home = () => {
 
                 {recommendedModels.length > 0 && (
                   <div className='mt-[72px] md:mt-[88px] w-full max-w-6xl'>
-                    <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mb-4 px-1'>
+                    <div className='flex flex-row items-center justify-between gap-3 mb-4 px-1'>
                       <div className='text-left w-full sm:w-auto'>
                         <Text className='text-lg md:text-xl font-semibold text-semi-color-text-0'>
                           {t('推荐模型')}
@@ -266,6 +266,7 @@ const Home = () => {
                         <Button
                           theme='borderless'
                           type='primary'
+                          style={{ paddingRight: 0 }}
                           className='!rounded-full !text-[#6d28d9] hover:!text-[#5b21b6] hover:!bg-[#f5f3ff] dark:!text-[#c4b5fd] dark:hover:!text-[#ddd6fe] dark:hover:!bg-[#24113f]'
                         >
                           {t('查看全部')}
