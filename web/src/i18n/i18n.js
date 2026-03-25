@@ -44,6 +44,46 @@ export function normalizeAppLanguage(lang) {
   return DEFAULT_LANGUAGE;
 }
 
+export function getStoredAppLanguage() {
+  if (typeof window === 'undefined') {
+    return DEFAULT_LANGUAGE;
+  }
+  return normalizeAppLanguage(
+    localStorage.getItem('i18nextLng') || navigator.language,
+  );
+}
+
+export function setStoredAppLanguage(lang) {
+  const normalizedLanguage = normalizeAppLanguage(lang);
+  if (typeof window !== 'undefined') {
+    localStorage.setItem('i18nextLng', normalizedLanguage);
+  }
+  return normalizedLanguage;
+}
+
+export function applyAppLanguage(lang, i18nInstance = i18n) {
+  const normalizedLanguage = setStoredAppLanguage(lang);
+  if (i18nInstance.language !== normalizedLanguage) {
+    i18nInstance.changeLanguage(normalizedLanguage || DEFAULT_LANGUAGE);
+  }
+  return normalizedLanguage;
+}
+
+export function syncStoredLanguageFromUser(user, i18nInstance = i18n) {
+  if (!user?.setting) {
+    return getStoredAppLanguage();
+  }
+  try {
+    const settings = JSON.parse(user.setting);
+    if (!settings?.language) {
+      return getStoredAppLanguage();
+    }
+    return applyAppLanguage(settings.language, i18nInstance);
+  } catch (e) {
+    return getStoredAppLanguage();
+  }
+}
+
 i18n
   .use(LanguageDetector)
   .use(initReactI18next)
@@ -55,7 +95,7 @@ i18n
       'zh-CN': zhCNTranslation,
     },
     fallbackLng: DEFAULT_LANGUAGE,
-    lng: DEFAULT_LANGUAGE,
+    lng: getStoredAppLanguage(),
     nonExplicitSupportedLngs: false,
     nsSeparator: false,
     detection: {

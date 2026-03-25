@@ -20,7 +20,7 @@ For commercial licensing, please contact support@quantumnous.com
 import React, { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { reducer, initialState } from './reducer';
-import { normalizeAppLanguage } from '../../i18n/i18n';
+import { syncStoredLanguageFromUser } from '../../i18n/i18n';
 
 export const UserContext = React.createContext({
   state: initialState,
@@ -33,20 +33,7 @@ export const UserProvider = ({ children }) => {
 
   // Sync language preference when user data is loaded
   useEffect(() => {
-    if (state.user?.setting) {
-      try {
-        const settings = JSON.parse(state.user.setting);
-        if (!settings.language) {
-          return;
-        }
-        const normalizedLanguage = normalizeAppLanguage(settings.language);
-        if (normalizedLanguage !== i18n.language) {
-          i18n.changeLanguage(normalizedLanguage);
-        }
-      } catch (e) {
-        // Ignore parse errors
-      }
-    }
+    syncStoredLanguageFromUser(state.user, i18n);
   }, [state.user?.setting, i18n]);
 
   return (

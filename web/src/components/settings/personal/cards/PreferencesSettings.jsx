@@ -25,6 +25,7 @@ import { API, showSuccess, showError } from "../../../../helpers";
 import { UserContext } from "../../../../context/User";
 import {
 	DEFAULT_LANGUAGE,
+	applyAppLanguage,
 	normalizeAppLanguage,
 } from "../../../../i18n/i18n";
 
@@ -51,7 +52,7 @@ const PreferencesSettings = ({ t }) => {
 					const lang = normalizeAppLanguage(settings.language);
 					setCurrentLanguage(lang);
 					if (i18n.language !== lang) {
-						i18n.changeLanguage(lang);
+						applyAppLanguage(lang, i18n);
 					}
 				}
 			} catch (e) {
@@ -70,7 +71,7 @@ const PreferencesSettings = ({ t }) => {
 		try {
 			// Update language immediately for responsive UX
 			setCurrentLanguage(lang);
-			i18n.changeLanguage(lang);
+			applyAppLanguage(lang, i18n);
 
 			// Save to backend
 			const res = await API.put("/api/user/self", {
@@ -80,32 +81,37 @@ const PreferencesSettings = ({ t }) => {
 			if (res.data.success) {
 				showSuccess(t("语言偏好已保存"));
 				// Update user context with new setting
-				if (userState?.user?.setting) {
-					try {
-						const settings = JSON.parse(userState.user.setting);
-						settings.language = lang;
-						userDispatch({
-							type: "login",
-							payload: {
-								...userState.user,
-								setting: JSON.stringify(settings),
-							},
-						});
-					} catch (e) {
-						// Ignore
+				if (userState?.user) {
+					let settings = {};
+					if (userState.user.setting) {
+						try {
+							settings = JSON.parse(userState.user.setting) || {};
+						} catch (e) {
+							settings = {};
+						}
 					}
+					settings.language = lang;
+					const updatedUser = {
+						...userState.user,
+						setting: JSON.stringify(settings),
+					};
+					userDispatch({
+						type: "login",
+						payload: updatedUser,
+					});
+					localStorage.setItem("user", JSON.stringify(updatedUser));
 				}
 			} else {
 				showError(res.data.message || t("保存失败"));
 				// Revert on error
 				setCurrentLanguage(previousLang);
-				i18n.changeLanguage(previousLang);
+				applyAppLanguage(previousLang, i18n);
 			}
 		} catch (error) {
 			showError(t("保存失败，请重试"));
 			// Revert on error
 			setCurrentLanguage(previousLang);
-			i18n.changeLanguage(previousLang);
+			applyAppLanguage(previousLang, i18n);
 		} finally {
 			setLoading(false);
 		}

@@ -27,7 +27,7 @@ import { getLogo, getSystemName, API, showSuccess } from '../../helpers';
 import { useIsMobile } from './useIsMobile';
 import { useSidebarCollapsed } from './useSidebarCollapsed';
 import { useMinimumLoadingTime } from './useMinimumLoadingTime';
-import { normalizeAppLanguage } from '../../i18n/i18n';
+import { applyAppLanguage, normalizeAppLanguage } from '../../i18n/i18n';
 
 export const useHeaderBar = ({ onMobileMenuToggle, drawerOpen }) => {
   const { t, i18n } = useTranslation();
@@ -151,8 +151,8 @@ export const useHeaderBar = ({ onMobileMenuToggle, drawerOpen }) => {
   const handleLanguageChange = useCallback(
     async (lang) => {
       lang = normalizeAppLanguage(lang);
-      // Change language immediately for responsive UX
-      i18n.changeLanguage(lang);
+      // Change language immediately and persist the single source of truth
+      applyAppLanguage(lang, i18n);
 
       // If user is logged in, save preference to backend
       if (userState?.user?.id) {
@@ -161,21 +161,26 @@ export const useHeaderBar = ({ onMobileMenuToggle, drawerOpen }) => {
             language: lang,
           });
           if (res.data.success) {
-            // Update user context with new setting
-            if (userState?.user?.setting) {
-              try {
-                const settings = JSON.parse(userState.user.setting);
-                settings.language = lang;
-                userDispatch({
-                  type: 'login',
-                  payload: {
-                    ...userState.user,
-                    setting: JSON.stringify(settings),
-                  },
-                });
-              } catch (e) {
-                // Ignore parse errors
+            // Update user context and local cache with new setting
+            if (userState?.user) {
+              let settings = {};
+              if (userState.user.setting) {
+                try {
+                  settings = JSON.parse(userState.user.setting) || {};
+                } catch (e) {
+                  settings = {};
+                }
               }
+              settings.language = lang;
+              const updatedUser = {
+                ...userState.user,
+                setting: JSON.stringify(settings),
+              };
+              userDispatch({
+                type: 'login',
+                payload: updatedUser,
+              });
+              localStorage.setItem('user', JSON.stringify(updatedUser));
             }
           }
         } catch (error) {

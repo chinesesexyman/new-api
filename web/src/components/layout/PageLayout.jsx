@@ -37,7 +37,6 @@ import {
 import { UserContext } from '../../context/User';
 import { StatusContext } from '../../context/Status';
 import { useLocation } from 'react-router-dom';
-import { normalizeAppLanguage } from '../../i18n/i18n';
 const { Sider, Content, Header } = Layout;
 
 const PageLayout = () => {
@@ -58,7 +57,6 @@ const PageLayout = () => {
     '/console/midjourney',
     '/console/task',
     '/console/models',
-    '/pricing',
   ];
 
   const shouldHideFooter = cardProPages.includes(location.pathname);
@@ -114,8 +112,6 @@ const PageLayout = () => {
         linkElement.href = logo;
       }
     }
-    const savedLang = localStorage.getItem('i18nextLng');
-    i18n.changeLanguage(normalizeAppLanguage(savedLang));
   }, [i18n]);
 
   return (

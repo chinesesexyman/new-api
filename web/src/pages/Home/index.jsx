@@ -190,16 +190,16 @@ const Home = () => {
       {homePageContentLoaded && homePageContent === '' ? (
         <div className='w-full overflow-x-hidden'>
           {/* Banner 部分 */}
-          <div className='w-full border-b border-semi-color-border min-h-[500px] md:min-h-[600px] lg:min-h-[700px] relative overflow-x-hidden'>
+          <div className='w-full min-h-[500px] md:min-h-[600px] lg:min-h-[700px] relative overflow-x-hidden'>
             {/* 背景模糊晕染球 */}
             <div className='blur-ball blur-ball-indigo' />
             <div className='blur-ball blur-ball-teal' />
-            <div className='flex items-center justify-center h-full px-4 py-20 md:py-24 lg:py-32 mt-10'>
+            <div className='flex items-center justify-center px-4 sm:px-5 py-16 sm:py-20 md:py-24 lg:py-32 mt-12 sm:mt-10'>
               {/* 居中内容区 */}
-              <div className='flex flex-col items-center justify-center text-center max-w-4xl mx-auto'>
+              <div className='flex flex-col items-center justify-center text-center max-w-4xl mx-auto w-full'>
                 <div className='flex flex-col items-center justify-center mb-6 md:mb-8'>
                   <h1
-                    className={`text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold text-semi-color-text-0 leading-tight ${isChinese ? 'tracking-wide md:tracking-wider' : ''}`}
+                    className={`text-[2rem] sm:text-4xl md:text-5xl xl:text-6xl font-bold text-semi-color-text-0 leading-tight ${isChinese ? 'tracking-wide md:tracking-wider' : ''}`}
                   >
                     <>
                       {t('连接全球 AI 模型的')}
@@ -207,7 +207,7 @@ const Home = () => {
                       <span className='shine-text'>{t('一站式服务平台')}</span>
                     </>
                   </h1>
-                  <p className='text-base md:text-lg lg:text-xl text-semi-color-text-1 mt-4 md:mt-6 max-w-xl'>
+                  <p className='text-sm sm:text-base md:text-lg lg:text-xl text-semi-color-text-1 mt-4 md:mt-6 max-w-[22rem] sm:max-w-xl'>
                     {t(
                       '一站式 API 接入， 覆盖 OpenAI、Anthropic、Google 等300 + 顶尖 AI 模型。更低成本、更高稳定、更快响应。',
                     )}
@@ -215,13 +215,13 @@ const Home = () => {
                 </div>
 
                 {/* 操作按钮 */}
-                <div className='flex flex-row gap-4 justify-center items-center'>
+                <div className='flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-center w-full sm:w-auto max-w-[22rem] sm:max-w-none'>
                   <Link to='/console/token'>
                     <Button
                       theme='solid'
                       type='primary'
                       size={isMobile ? 'default' : 'large'}
-                      className='home-hero-primary-btn !rounded-3xl !w-[190px] md:!w-[220px] !h-[48px] md:!h-[54px] !text-base md:!text-lg !font-semibold'
+                      className='home-hero-primary-btn !rounded-3xl !w-[220px] sm:!w-[220px] !max-w-full !h-[48px] md:!h-[54px] !text-base md:!text-lg !font-semibold'
                       icon={<IconPlay />}
                     >
                       {t('获取API Key')}
@@ -245,7 +245,7 @@ const Home = () => {
                     <Link to='/docs/model-access'>
                       <Button
                         size={isMobile ? 'default' : 'large'}
-                        className='home-hero-secondary-btn flex items-center justify-center !rounded-3xl !w-[190px] md:!w-[220px] !h-[48px] md:!h-[54px] !text-base md:!text-lg !font-semibold'
+                        className='home-hero-secondary-btn flex items-center justify-center !rounded-3xl !w-[220px] sm:!w-[220px] !max-w-full !h-[48px] md:!h-[54px] !text-base md:!text-lg !font-semibold'
                         icon={<IconFile />}
                       >
                         {t('API文档')}
@@ -256,13 +256,13 @@ const Home = () => {
 
                 {recommendedModels.length > 0 && (
                   <div className='mt-[72px] md:mt-[88px] w-full max-w-6xl'>
-                    <div className='flex items-center justify-between gap-4 mb-4 px-1'>
-                      <div className='text-left'>
+                    <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mb-4 px-1'>
+                      <div className='text-left w-full sm:w-auto'>
                         <Text className='text-lg md:text-xl font-semibold text-semi-color-text-0'>
                           {t('推荐模型')}
                         </Text>
                       </div>
-                      <Link to='/pricing'>
+                      <Link to='/pricing' className='self-start sm:self-auto'>
                         <Button
                           theme='borderless'
                           type='primary'
@@ -277,29 +277,29 @@ const Home = () => {
                         <Link
                           key={model.model_name}
                           to='/pricing'
-                          className='block shrink-0 w-[280px] md:w-[320px] snap-start'
+                          className='block shrink-0 w-[88vw] max-w-[360px] sm:w-[360px] snap-start'
                         >
                           <Card
                             className='!rounded-3xl border-0 shadow-sm hover:shadow-lg transition-all duration-200 h-full text-left backdrop-blur-sm'
                             bodyStyle={{ padding: 20, height: '100%' }}
                           >
                             <div className='flex flex-col h-full'>
-                              <div className='flex items-start justify-between gap-3 mb-4'>
+                              <div className='flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-4'>
                                 <div className='flex items-center gap-3 min-w-0'>
                                   <div className='w-10 h-10 rounded-2xl bg-white/80 dark:bg-black/20 shadow-sm flex items-center justify-center shrink-0'>
                                     {renderModelIcon(model)}
                                   </div>
                                   <div className='min-w-0'>
-                                    <div className='text-base font-semibold text-semi-color-text-0 leading-6 min-h-[48px] line-clamp-2 break-words'>
+                                    <div className='text-base font-semibold text-semi-color-text-0 leading-6 h-[48px] line-clamp-2 break-words overflow-hidden'>
                                       {model.model_name}
                                     </div>
-                                    <div className='text-xs text-semi-color-text-2 truncate'>
+                                    <div className='text-xs text-semi-color-text-2 leading-4 h-[32px] line-clamp-2 break-words overflow-hidden'>
                                       {model.vendor_name || t('精选模型')}
                                     </div>
                                   </div>
                                 </div>
                                 {model.tags ? (
-                                  <div className='flex flex-wrap justify-end gap-2 shrink-0 max-w-[45%]'>
+                                  <div className='flex flex-wrap justify-start sm:justify-end gap-2 shrink-0 max-w-full sm:max-w-[45%]'>
                                     {model.tags
                                       .split(',')
                                       .filter(Boolean)
@@ -318,10 +318,12 @@ const Home = () => {
                                 ) : null}
                               </div>
                               {model.description ? (
-                                <div className='text-sm text-semi-color-text-1 leading-6 min-h-[48px] line-clamp-2'>
+                                <div className='text-sm text-semi-color-text-1 leading-6 h-[48px] line-clamp-2 break-words overflow-hidden'>
                                   {model.description}
                                 </div>
-                              ) : null}
+                              ) : (
+                                <div className='h-[48px]' />
+                              )}
                             </div>
                           </Card>
                         </Link>
@@ -356,7 +358,7 @@ const Home = () => {
                             </Typography.Text>
                           )}
                         </div>
-                        <Typography.Text className='!text-[10px] sm:!text-[11px] !leading-4 !text-semi-color-text-1 dark:!text-slate-300 text-center break-words'>
+                        <Typography.Text className='!text-[10px] sm:!text-[11px] !leading-4 !text-semi-color-text-1 dark:!text-slate-300 text-center break-words h-[32px] line-clamp-2 overflow-hidden flex items-center justify-center'>
                           {vendor.name}
                         </Typography.Text>
                       </div>
